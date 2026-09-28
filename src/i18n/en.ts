@@ -15,6 +15,24 @@ export interface HeartRateMethodInfoI18n {
   description: string;
 }
 
+export interface AgeGradingLevelsI18n {
+  worldClass: string;
+  nationalClass: string;
+  regionalClass: string;
+  localClass: string;
+  activeRunner: string;
+  recreationalRunner: string;
+}
+
+export interface AgeGradingI18n {
+  levels: AgeGradingLevelsI18n;
+  errors: {
+    ageOutOfRange: string;
+    invalidTime: string;
+    standardNotFound: string;
+  };
+}
+
 export interface RunnerToolsLocale {
   locale: string;
   vdot: {
@@ -70,6 +88,7 @@ export interface RunnerToolsLocale {
       lthr: HeartRateMethodInfoI18n;
     };
   };
+  ageGrading: AgeGradingI18n;
 }
 
 export const enLocale: RunnerToolsLocale = {
@@ -174,6 +193,21 @@ export const enLocale: RunnerToolsLocale = {
         title: 'LTHR Inputs',
         description: 'Enter your Lactate Threshold Heart Rate (LTHR) to calculate Joe Friel running zones.',
       },
+    },
+  },
+  ageGrading: {
+    levels: {
+      worldClass: 'World Class',
+      nationalClass: 'National Class',
+      regionalClass: 'Regional Class',
+      localClass: 'Local Class',
+      activeRunner: 'Active Runner',
+      recreationalRunner: 'Recreational Runner',
+    },
+    errors: {
+      ageOutOfRange: 'Age must be between 5 and 100.',
+      invalidTime: 'Please enter a valid finish time.',
+      standardNotFound: 'Age standard not found for this age and distance.',
     },
   },
 };

@@ -104,4 +104,19 @@ export const zhLocale: RunnerToolsLocale = {
       },
     },
   },
+  ageGrading: {
+    levels: {
+      worldClass: '世界顶尖级 (World Class)',
+      nationalClass: '国家精英级 (National Class)',
+      regionalClass: '省市高水平级 (Regional Class)',
+      localClass: '大众健将级 (Local Class)',
+      activeRunner: '规律跑者级 (Active Runner)',
+      recreationalRunner: '健康休闲跑者 (Recreational Runner)',
+    },
+    errors: {
+      ageOutOfRange: '年龄范围需在 5 至 100 岁之间。',
+      invalidTime: '请输入有效的完赛用时。',
+      standardNotFound: '未找到该年龄与距离的官方世界纪录标准。',
+    },
+  },
 };
