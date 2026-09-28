@@ -116,29 +116,53 @@ export function solveVelocityForVO2(vo2: number): number {
 }
 
 /**
- * Solve time (in seconds) for a given race distance and VDOT using bisection numerical method
+ * Solve time (in seconds) for a given race distance and VDOT using bisection numerical method.
+ * Brackets between 0.15 minutes (~9 seconds) and 6000 minutes (100 hours).
+ * Returns null if distance/VDOT is invalid or if no physiological solution exists in this bracket.
  */
 export function solveTimeForDistance(distanceMeters: number, vdot: number): number | null {
-  if (!Number.isFinite(distanceMeters) || distanceMeters <= 0 || !Number.isFinite(vdot) || vdot <= 0) {
+  if (
+    !Number.isFinite(distanceMeters) ||
+    distanceMeters <= 0 ||
+    !Number.isFinite(vdot) ||
+    vdot <= 0 ||
+    vdot > 120
+  ) {
     return null;
   }
-  let low = 1.0;     // 1 min
-  let high = 1440.0; // 24 hours
-  let t = 720.0;
 
-  for (let i = 0; i < 35; i++) {
-    t = (low + high) / 2;
+  let low = 0.15;     // ~9 seconds (sprint)
+  let high = 6000.0;  // 100 hours (multi-day ultra)
+
+  const f = (t: number): number => {
     const v = distanceMeters / t;
     const vo2 = calculateVO2(v);
     const p = calculateDropDeadFraction(t);
-    if (p <= 0) return null;
-    const diff = vo2 / p - vdot;
+    return p > 0 ? vo2 / p - vdot : -1;
+  };
+
+  const fLow = f(low);
+  const fHigh = f(high);
+
+  // Since f(t) is strictly decreasing in t, a root requires f(low) > 0 and f(high) < 0
+  if (fLow <= 0 || fHigh >= 0 || !Number.isFinite(fLow) || !Number.isFinite(fHigh)) {
+    return null;
+  }
+
+  let t = (low + high) / 2;
+  for (let i = 0; i < 45; i++) {
+    t = (low + high) / 2;
+    const diff = f(t);
+    if (Math.abs(diff) < 1e-6) {
+      break;
+    }
     if (diff > 0) {
       low = t;
     } else {
       high = t;
     }
   }
+
   return t * 60;
 }
 
@@ -279,10 +303,17 @@ export function calculateVDOT(options: CalculateVDOTOptions): VDOTCalculationRes
     zonesList.push(item);
   }
 
+  const rawEquivalents = calculateEquivalentTimesRaw(
+    vdot,
+    STANDARD_RACE_DISTANCES.map((d) => d.meters),
+    unit
+  ) ?? [];
+  const rawEquivMap = new Map(rawEquivalents.map((item) => [item.distanceMeters, item]));
+
   const equivalentPerformances: EquivalentPerformance[] = STANDARD_RACE_DISTANCES.map((d) => {
-    const predictedSeconds = solveTimeForDistance(d.meters, vdot) ?? 0;
-    const unitDistance = unit === 'km' ? 1000 : 1609.344;
-    const targetPaceSecs = predictedSeconds > 0 ? predictedSeconds / (d.meters / unitDistance) : 0;
+    const rawItem = rawEquivMap.get(d.meters);
+    const predictedSeconds = rawItem ? rawItem.predictedSeconds : 0;
+    const targetPaceSecs = rawItem ? rawItem.targetPaceSecs : 0;
 
     return {
       distanceMeters: d.meters,

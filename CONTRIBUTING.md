@@ -1,0 +1,86 @@
+# Contributing to Runner Tools
+
+Thank you for your interest in contributing to `@slow-bloom/runner-tools`! We welcome bug fixes, algorithm optimizations, new formula implementations, and localization contributions.
+
+---
+
+## Development Prerequisites
+
+- **Node.js**: `>= 20.0.0`
+- **npm**: `>= 10.0.0`
+
+---
+
+## Getting Started
+
+1. **Fork and clone the repository:**
+   ```bash
+   git clone https://github.com/slow-bloom/runner-tools.git
+   cd runner-tools
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Run the test suite:**
+   ```bash
+   npm test
+   # Or run in interactive watch mode
+   npm run test:watch
+   ```
+
+4. **Type-check the codebase:**
+   ```bash
+   npm run typecheck
+   ```
+
+5. **Build the packages:**
+   ```bash
+   npm run build
+   ```
+
+---
+
+## Architecture & Design Principles
+
+When submitting code to this library, please adhere to these core principles:
+
+1. **Zero Runtime Dependencies**: The core library must remain 100% pure TypeScript without runtime dependencies.
+2. **Transparent Numerical Provenance**: All athletic formulas must cite primary scientific or competitive literature (e.g. peer-reviewed sports science, WMA standards).
+3. **No Silent Clamping**: Solvers and predictors must check physiological domains and bracket roots. If inputs are unsupported or outside valid ranges, return `null` rather than silently clamping to arbitrary boundaries.
+4. **Strict Dual Module Support**: Any exports must maintain strict compatibility with both ES Modules (`dist/index.js`, `dist/index.d.ts`) and CommonJS under TypeScript's `node16` resolution (`dist/index.cjs`, `dist/index.d.cts`).
+5. **Localization Contract**: Any user-facing strings or labels must provide fallback to the English dictionary (`enLocale`) and support deep partial overrides.
+
+---
+
+## Pull Request Checklist
+
+Before submitting a Pull Request, ensure that:
+
+- [ ] All unit tests pass: `npm test`
+- [ ] TypeScript checks succeed with zero errors: `npm run typecheck`
+- [ ] The build succeeds: `npm run build`
+- [ ] New formulas or changes include comprehensive unit tests covering standard values, physiological edges, and invalid/unbracketed inputs.
+- [ ] Documentation and example snippets are updated and adhere to strict null checking.
+
+---
+
+## Versioning Policy
+
+`@slow-bloom/runner-tools` follows [Semantic Versioning 2.0.0](https://semver.org/):
+
+- **During `0.x.y` initial development**:
+  - `0.x.0` (minor bump): May introduce breaking API changes, major algorithm revisions, or new core modules.
+  - `0.x.y` (patch bump): Backward-compatible bug fixes, performance improvements, and documentation updates.
+- **From `1.0.0` onwards**:
+  - `MAJOR`: Incompatible API or formula interface modifications.
+  - `MINOR`: Backward-compatible new features and algorithms.
+  - `PATCH`: Backward-compatible bug fixes.
+
+---
+
+## Security Vulnerabilities
+
+To report a private security vulnerability or flaw, please email **`chenhaomm@sina.com`** directly rather than opening a public issue. We will acknowledge receipt within 48 hours and work with you on a timely resolution.

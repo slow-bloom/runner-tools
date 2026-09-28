@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-3178c6.svg)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)]()
+[![CI](https://github.com/slow-bloom/runner-tools/actions/workflows/ci.yml/badge.svg)](https://github.com/slow-bloom/runner-tools/actions/workflows/ci.yml)
 
 ---
 
@@ -21,10 +21,11 @@ Experience these algorithms live in action on the web:
 
 ## Highlights
 
-- **Pure & Zero Dependencies**: 100% pure TypeScript formulas with zero runtime dependencies. Runs anywhere: Node.js, browsers, Bun, Deno, Cloudflare Workers.
+- **Pure & Zero Dependencies**: 100% pure TypeScript formulas with zero runtime dependencies. Runs anywhere: Node.js (both ESM and CommonJS with full type declarations), browsers, Bun, Deno, Cloudflare Workers.
 - **Scientifically Grounded**: Implements Daniels & Gilbert's oxygen consumption models, Riegel's endurance power laws, Karvonen heart rate reserve equations, and World Masters Athletics (WMA) road standards.
-- **Built-in i18n & Extensible**: Multilingual support with hierarchical locale fallback (exact tag -> base language -> English default) and custom dictionary registration.
-- **Unit Tested**: Rigorously benchmarked against standard racing records and numerical boundary conditions.
+- **Built-in i18n & Extensible**: Multilingual support with hierarchical locale fallback (exact tag -> base language -> English default) and deep custom dictionary merging.
+- **Strict Null Safety**: Clear contracts where invalid, unphysiological, or unsolvable inputs return `null` instead of throwing or generating `NaN`.
+- **Rigorously Tested**: Thorough unit test coverage benchmarking against published athletic standards and physiological boundary conditions.
 
 ---
 
@@ -43,10 +44,12 @@ yarn add @slow-bloom/runner-tools
 
 Or directly via CDN in HTML:
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@slow-bloom/runner-tools/dist/runner-tools.global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@slow-bloom/runner-tools@0.1.0/dist/runner-tools.global.js"></script>
 <script>
   const result = RunnerTools.calculateVDOT({ distanceMeters: 5000, timeSeconds: 1200 });
-  console.log('VDOT:', result.vdotFormatted);
+  if (result) {
+    console.log('VDOT:', result.vdotFormatted);
+  }
 </script>
 ```
 
@@ -92,9 +95,11 @@ const res = calculateVDOT({
   lang: 'en',
 });
 
-console.log('VDOT:', res.vdotFormatted); // "49.8"
-console.log('Easy Pace:', `${res.zones.E.lowPaceFormatted} - ${res.zones.E.highPaceFormatted} /km`);
-// e.g. "5'05" - 5'41" /km"
+if (res) {
+  console.log('VDOT:', res.vdotFormatted); // "49.8"
+  console.log('Easy Pace:', `${res.zones.E.lowPaceFormatted} - ${res.zones.E.highPaceFormatted} /km`);
+  // "5'03\" - 5'59\" /km"
+}
 ```
 
 ---
@@ -126,10 +131,12 @@ const result = calculateRacePredictions({
   unit: 'km',
 });
 
-console.log('Half Marathon:', result.predictions.find(p => p.key === 'halfMarathon')?.timeFormatted);
-// "1:39:17"
-console.log('Marathon:', result.predictions.find(p => p.key === 'marathon')?.timeFormatted);
-// "3:27:01"
+if (result) {
+  console.log('Half Marathon:', result.predictions.find(p => p.key === 'halfMarathon')?.timeFormatted);
+  // "1:39:17"
+  console.log('Marathon:', result.predictions.find(p => p.key === 'marathon')?.timeFormatted);
+  // "3:27:01"
+}
 ```
 
 ---
@@ -137,7 +144,7 @@ console.log('Marathon:', result.predictions.find(p => p.key === 'marathon')?.tim
 ### 3. Heart Rate Zones (`heart-rate-zones`)
 
 Calculates 5 targeted training zones based on three physiological reference models:
-- **Max HR %**: 50-60%, 60-70%, 70-80%, 80-90%, 90-100% of maximum heart rate.
+- **Max HR %**: 50–60%, 60–70%, 70–80%, 80–90%, 90–100% of maximum heart rate.
 - **Karvonen (HRR)**: Incorporates resting heart rate to compute Heart Rate Reserve: $\text{Target HR} = \text{Resting HR} + (\text{Max HR} - \text{Resting HR}) \times \text{Intensity}$.
 - **Lactate Threshold (LTHR)**: Joe Friel's 5-zone model referenced from functional threshold heart rate.
 
@@ -210,9 +217,11 @@ const result = calculateAgeGrading({
   timeSeconds: 6540, // 1h 49m 0s
 });
 
-console.log('Score:', result.scoreFormatted); // e.g. "55.5%"
-console.log('Level:', result.level.label); // "Active Runner"
-console.log('Open Equivalent:', result.ageEquivalentTimeFormatted); // e.g. "1:45:08"
+if (result) {
+  console.log('Score:', result.scoreFormatted); // e.g. "55.5%"
+  console.log('Level:', result.level.label); // "Active Runner"
+  console.log('Open Equivalent:', result.ageEquivalentTimeFormatted); // e.g. "1:45:08"
+}
 ```
 
 ---
@@ -268,21 +277,35 @@ console.log('Efficiency Factor:', result.aerobicEfficiency?.efficiencyFactorForm
 
 ---
 
-## Roadmap
+## Scientific Foundations & Operational Boundaries
 
-- [x] Jack Daniels VDOT & Training Paces Engine
-- [x] Peter Riegel Race Performance Predictor
-- [x] Heart Rate Zones (Max HR, Karvonen HRR, LTHR)
-- [x] Age-Graded Scoring (WMA Tables)
-- [x] Running Efficiency & Biomechanical Economy (VR, DF, EF)
-- [ ] Browser-based FIT / GPX / TCX Parser & Converter (Zero Server Uploads)
-- [ ] GPS Drift & Ghost Mileage Analyzer
+### Operating Ranges and Assumptions
+
+| Algorithm | Primary Input Ranges | Valid Domain | Edge-Case Behavior |
+|:---|:---|:---|:---|
+| **VDOT** | Distance: 400 m – 200 km<br>Duration: 30 s – 100 h | VDOT: 15 – 85 | Returns `null` if unphysiological or unbracketed in solver; no silent clamping |
+| **Race Predictor** | Base Distance: > 0 m<br>Target Distance: > 0 m<br>Exponent: 1.00 – 1.30 | Times: 5 s – 100 h | Returns `null` for non-positive or infinite values; sanitizes prototype keys |
+| **Heart Rate Zones** | Max HR: 80 – 240 bpm<br>Resting HR: 30 – 120 bpm | Max HR > Resting HR | Throws descriptive error if Resting HR ≥ Max HR |
+| **Age Grading** | Ages: 5 – 100 years | 5K, 10K, Half, Full | Returns `null` for unsupported ages or non-standard distances |
+| **Running Efficiency** | Cadence: 100 – 260 spm<br>GCT: 100 – 500 ms | Ground contact fraction | Skips invalid fields independently; never outputs `NaN` |
+
+### Primary References
+
+1. **Daniels, J., & Gilbert, J.** (1979). *Oxygen Power: Performance Tables for Distance Runners*. Privately published.
+2. **Daniels, J.** (2013). *Daniels' Running Formula* (3rd ed.). Human Kinetics.
+3. **Riegel, P. S.** (1977). "Athletic Records and Human Endurance". *American Scientist*, 65(3), 285–290.
+4. **Riegel, P. S.** (1981). "Athletic Records and Human Endurance". *Runner's World*, May 1981.
+5. **Karvonen, M. J., Kentala, E., & Mustala, O.** (1957). "The effects of training on heart rate: a longitudinal study". *Annales Medicinae Experimentalis et Biologiae Fenniae*, 35(3), 307–315.
+6. **Tanaka, H., Monahan, K. D., & Seals, D. R.** (2001). "Age-predicted maximal heart rate revisited". *Journal of the American College of Cardiology*, 37(1), 153–156.
+7. **Gellish, R. L., et al.** (2007). "Longitudinal Modeling of the Relationship between Age and Maximal Heart Rate". *Medicine & Science in Sports & Exercise*, 39(5), 822–829.
+8. **World Masters Athletics (WMA)**. (2020). *Age-Grading Tables for Road Running Events*.
+9. **Friel, J.** (2009). *The Triathlete's Training Bible* (3rd ed.). VeloPress.
 
 ---
 
 ## Contributing
 
-Contributions, bug reports, and discussions regarding endurance sports algorithms are warmly welcomed! Please feel free to submit a pull request or open an issue.
+We welcome community contributions, bug reports, and discussions regarding endurance sports algorithms! Please review [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup, test execution, and guidelines.
 
 ---
 

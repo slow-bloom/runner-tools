@@ -1,6 +1,7 @@
 import * as esbuild from 'esbuild';
 import { execSync } from 'child_process';
-import { existsSync, rmSync } from 'fs';
+import { existsSync, rmSync, readdirSync, statSync, readFileSync, writeFileSync } from 'fs';
+import { join } from 'path';
 
 if (existsSync('dist')) {
   rmSync('dist', { recursive: true, force: true });
@@ -9,7 +10,29 @@ if (existsSync('dist')) {
 console.log('Building TypeScript types...');
 execSync('npx tsc --emitDeclarationOnly', { stdio: 'inherit' });
 
+// Generate CommonJS-compatible declaration files (.d.cts) for node16 consumers
+function generateDctsFiles(dir) {
+  const entries = readdirSync(dir);
+  for (const entry of entries) {
+    const fullPath = join(dir, entry);
+    if (statSync(fullPath).isDirectory()) {
+      generateDctsFiles(fullPath);
+    } else if (entry.endsWith('.d.ts')) {
+      const targetCts = fullPath.slice(0, -5) + '.d.cts';
+      let content = readFileSync(fullPath, 'utf8');
+      content = content.replace(/(from\s+['"]\.[^'"]+)\.js(['"])/g, '$1.cjs$2');
+      content = content.replace(/(import\(['"]\.[^'"]+)\.js(['"]\))/g, '$1.cjs$2');
+      writeFileSync(targetCts, content);
+    }
+  }
+}
+generateDctsFiles('dist');
+
 console.log('Bundling JavaScript distributions...');
+
+const BANNER = {
+  js: '/*! @slow-bloom/runner-tools | MIT License | https://github.com/slow-bloom/runner-tools */',
+};
 
 // 1. ESM bundle
 await esbuild.build({
@@ -17,6 +40,7 @@ await esbuild.build({
   outfile: 'dist/index.js',
   bundle: true,
   format: 'esm',
+  banner: BANNER,
   sourcemap: true,
   target: 'es2022',
 });
@@ -27,6 +51,7 @@ await esbuild.build({
   outfile: 'dist/index.cjs',
   bundle: true,
   format: 'cjs',
+  banner: BANNER,
   sourcemap: true,
   target: 'es2022',
 });
@@ -38,6 +63,8 @@ await esbuild.build({
   bundle: true,
   format: 'iife',
   globalName: 'RunnerTools',
+  banner: BANNER,
+  legalComments: 'inline',
   sourcemap: true,
   minify: true,
   target: 'es2020',
@@ -46,5 +73,6 @@ await esbuild.build({
 console.log('Build complete! Artifacts in dist/:');
 console.log('  - dist/index.js (ESM)');
 console.log('  - dist/index.cjs (CJS)');
-console.log('  - dist/runner-tools.global.js (Browser IIFE, window.RunnerTools)');
-console.log('  - dist/**/*.d.ts (Type definitions)');
+console.log('  - dist/runner-tools.global.js (Browser IIFE, window.RunnerTools, MIT banner preserved)');
+console.log('  - dist/**/*.d.ts (ESM Type definitions)');
+console.log('  - dist/**/*.d.cts (CJS Type definitions for node16 compatibility)');

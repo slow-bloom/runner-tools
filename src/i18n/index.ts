@@ -20,45 +20,43 @@ export function registerLocale(langCode: string, locale: RunnerToolsLocale): voi
   localeRegistry.set(langCode.toLowerCase(), locale);
 }
 
+export type DeepPartial<T> = T extends Function
+  ? T
+  : T extends Array<infer U>
+  ? Array<DeepPartial<U>>
+  : T extends object
+  ? { [P in keyof T]?: DeepPartial<T[P]> }
+  : T;
+
+function isObject(item: unknown): item is Record<string, unknown> {
+  return item !== null && typeof item === 'object' && !Array.isArray(item);
+}
+
 /**
  * Deep merge helper to combine custom partial locale overrides with baseline enLocale
  */
-function mergeLocale(base: RunnerToolsLocale, custom: Partial<RunnerToolsLocale>): RunnerToolsLocale {
-  return {
-    ...base,
-    ...custom,
-    vdot: {
-      ...base.vdot,
-      ...(custom.vdot || {}),
-      zones: {
-        ...base.vdot.zones,
-        ...(custom.vdot?.zones || {}),
-      },
-      standardDistances: {
-        ...base.vdot.standardDistances,
-        ...(custom.vdot?.standardDistances || {}),
-      },
-      units: {
-        ...base.vdot.units,
-        ...(custom.vdot?.units || {}),
-      },
-    },
-    racePredictor: {
-      ...base.racePredictor,
-      ...(custom.racePredictor || {}),
-      distances: {
-        ...base.racePredictor.distances,
-        ...(custom.racePredictor?.distances || {}),
-      },
-      exponents: {
-        ...base.racePredictor.exponents,
-        ...(custom.racePredictor?.exponents || {}),
-      },
-    },
-  };
+export function deepMerge<T extends Record<string, unknown>>(
+  target: T,
+  source?: DeepPartial<T> | null
+): T {
+  if (!source || !isObject(source)) return target;
+  const output: any = { ...target };
+
+  for (const key of Object.keys(source)) {
+    const targetVal = target[key];
+    const sourceVal = (source as any)[key];
+
+    if (isObject(targetVal) && isObject(sourceVal)) {
+      output[key] = deepMerge(targetVal, sourceVal);
+    } else if (sourceVal !== undefined) {
+      output[key] = sourceVal;
+    }
+  }
+
+  return output;
 }
 
-export type LocaleInput = string | Partial<RunnerToolsLocale> | undefined;
+export type LocaleInput = string | DeepPartial<RunnerToolsLocale> | undefined;
 
 /**
  * Resolve locale object with hierarchical fallback:
@@ -73,8 +71,8 @@ export function getLocale(input?: LocaleInput): RunnerToolsLocale {
   }
 
   // Caller passed a custom dictionary object directly
-  if (typeof input === 'object') {
-    return mergeLocale(enLocale, input);
+  if (typeof input === 'object' && input !== null) {
+    return deepMerge(enLocale as unknown as Record<string, unknown>, input as Record<string, unknown>) as unknown as RunnerToolsLocale;
   }
 
   const normalized = input.trim().toLowerCase();

@@ -118,4 +118,23 @@ describe('VDOT Formula & Pace Calculations', () => {
     const checkResult = calculateVDOT({ distanceMeters: 5000, timeSeconds: time5k })!;
     expect(checkResult.vdot).toBeCloseTo(50.0, 1);
   });
+
+  it('should accurately solve short track sprints and ultra distances without clamping', () => {
+    // 400m in 55s -> must solve close to 55s (not clamped to 60s)
+    const vdot400 = calculateVDOTScore(400, 55);
+    expect(vdot400).not.toBeNull();
+    const t400 = solveTimeForDistance(400, vdot400!);
+    expect(t400).not.toBeNull();
+    expect(t400!).toBeCloseTo(55, 0);
+
+    // 200km in 25h (90,000s) -> must solve close to 25h (not clamped to 24h = 86,400s)
+    const vdot200k = calculateVDOTScore(200000, 90000);
+    expect(vdot200k).not.toBeNull();
+    const t200k = solveTimeForDistance(200000, vdot200k!);
+    expect(t200k).not.toBeNull();
+    expect(t200k!).toBeCloseTo(90000, 0);
+
+    // Completely unphysiological VDOT (> 120) or invalid bracket should return null
+    expect(solveTimeForDistance(10000, 130)).toBeNull();
+  });
 });

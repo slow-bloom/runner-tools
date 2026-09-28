@@ -8,9 +8,14 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     }
   },
   "files": [
@@ -21,8 +26,16 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "build": "node build.mjs",
-    "prepack": "npm run build",
+    "prepack": "npm test && npm run build",
     "sync:website": "npm run build && node scripts/sync-website.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/slow-bloom/runner-tools.git"
+  },
+  "homepage": "https://apexrun.fit/tools/",
+  "bugs": {
+    "url": "https://github.com/slow-bloom/runner-tools/issues"
   },
   "keywords": [
     "running",

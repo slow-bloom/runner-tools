@@ -40,11 +40,26 @@ describe('i18n Locale Resolver & Registration', () => {
         zones: {
           E: { name: 'My Custom Easy Pace', shortName: 'CustomE', description: 'Custom description' },
         },
-      } as any,
+      },
     });
 
     expect(custom.vdot.zones.E.name).toBe('My Custom Easy Pace');
     // Unchanged zones fallback to English
     expect(custom.vdot.zones.M.name).toBe(enLocale.vdot.zones.M.name);
+  });
+
+  it('should preserve sibling fields when overriding only a single nested field', () => {
+    const custom = getLocale({
+      vdot: {
+        zones: {
+          E: { name: 'Only Name Overridden' },
+        },
+      },
+    });
+
+    expect(custom.vdot.zones.E.name).toBe('Only Name Overridden');
+    // shortName and description must be preserved from enLocale!
+    expect(custom.vdot.zones.E.shortName).toBe(enLocale.vdot.zones.E.shortName);
+    expect(custom.vdot.zones.E.description).toBe(enLocale.vdot.zones.E.description);
   });
 });

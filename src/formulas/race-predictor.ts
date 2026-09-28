@@ -140,10 +140,15 @@ export function calculateRacePredictions(
       ? `${distInUnit.toFixed(1)} ${locale.vdot.units.km}`
       : `${distInUnit.toFixed(2)} ${locale.vdot.units.mi}`;
 
-    const standardKey = target.key as StandardRaceDistanceKey;
+    const standardDistanceLabels = locale.racePredictor.distances;
+    const standardKey =
+      typeof target.key === 'string' &&
+      Object.prototype.hasOwnProperty.call(standardDistanceLabels, target.key)
+        ? (target.key as StandardRaceDistanceKey)
+        : undefined;
     const distanceLabel =
       target.label ||
-      (standardKey && locale.racePredictor.distances[standardKey]) ||
+      (standardKey ? standardDistanceLabels[standardKey] : undefined) ||
       `${(target.meters / 1000).toFixed(1)} km`;
 
     predictions.push({

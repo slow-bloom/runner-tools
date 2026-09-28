@@ -95,4 +95,25 @@ describe('Peter Riegel Race Predictor Formula', () => {
     });
     expect(allInvalid).toBeNull();
   });
+
+  it('should safely handle prototype properties as custom target keys without prototype pollution', () => {
+    const res = calculateRacePredictions({
+      baseDistanceMeters: 10000,
+      baseTimeSeconds: 2700,
+      targetDistances: [
+        { key: 'constructor', meters: 5000 },
+        { key: '__proto__', meters: 21097.5 },
+      ],
+    });
+
+    expect(res).not.toBeNull();
+    expect(res!.predictions.length).toBe(2);
+    for (const pred of res!.predictions) {
+      expect(typeof pred.distanceLabel).toBe('string');
+      expect(pred.distanceLabel).not.toContain('[native code]');
+      expect(typeof (pred as any).distanceLabel).not.toBe('function');
+    }
+    expect(res!.predictions[0].distanceLabel).toBe('5.0 km');
+    expect(res!.predictions[1].distanceLabel).toBe('21.1 km');
+  });
 });
