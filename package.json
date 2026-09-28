@@ -1,0 +1,43 @@
+{
+  "name": "@apexrun/runner-tools",
+  "version": "0.1.0",
+  "description": "Pure client-side exercise science algorithms, running pace formulas, and track utilities.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "build": "node build.mjs"
+  },
+  "keywords": [
+    "running",
+    "vdot",
+    "daniels-running-formula",
+    "pace-calculator",
+    "exercise-science",
+    "runner",
+    "garmin",
+    "apple-watch"
+  ],
+  "author": "Apex Run",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.8.0",
+    "vitest": "^3.0.0"
+  }
+}
