@@ -24,6 +24,13 @@ for (const relSite of SITES) {
     const targetPath = resolve(targetDir, 'runner-tools.global.js');
     copyFileSync(bundlePath, targetPath);
     console.log(`Synced bundle -> ${targetPath}`);
+
+    const licenseSrc = resolve('LICENSE');
+    if (existsSync(licenseSrc)) {
+      const licenseTarget = resolve(targetDir, 'runner-tools.LICENSE');
+      copyFileSync(licenseSrc, licenseTarget);
+      console.log(`Synced license -> ${licenseTarget}`);
+    }
     syncedCount++;
   } else {
     console.warn(`Skipping missing site directory: ${siteDir}`);

@@ -1,6 +1,6 @@
 import * as esbuild from 'esbuild';
 import { execSync } from 'child_process';
-import { existsSync, rmSync, readdirSync, statSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, rmSync, readdirSync, statSync, readFileSync, writeFileSync, copyFileSync } from 'fs';
 import { join } from 'path';
 
 if (existsSync('dist')) {
@@ -9,6 +9,9 @@ if (existsSync('dist')) {
 
 console.log('Building TypeScript types...');
 execSync('npx tsc --emitDeclarationOnly', { stdio: 'inherit' });
+
+// Copy LICENSE directly to dist
+copyFileSync('LICENSE', 'dist/LICENSE');
 
 // Generate CommonJS-compatible declaration files (.d.cts) for node16 consumers
 function generateDctsFiles(dir) {
@@ -30,8 +33,14 @@ generateDctsFiles('dist');
 
 console.log('Bundling JavaScript distributions...');
 
+const rawLicense = readFileSync('LICENSE', 'utf8').trim();
+const licenseCommentBody = rawLicense
+  .split('\n')
+  .map((line) => (line.length > 0 ? ` * ${line}` : ' *'))
+  .join('\n');
+
 const BANNER = {
-  js: '/*! @slow-bloom/runner-tools | MIT License | https://github.com/slow-bloom/runner-tools */',
+  js: `/*!\n * @slow-bloom/runner-tools\n * https://github.com/slow-bloom/runner-tools\n *\n${licenseCommentBody}\n */`,
 };
 
 // 1. ESM bundle

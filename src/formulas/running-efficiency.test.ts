@@ -36,6 +36,10 @@ describe('calculateDutyFactor', () => {
   it('returns null on invalid inputs', () => {
     expect(calculateDutyFactor(0, 200)).toBeNull();
     expect(calculateDutyFactor(180, -10)).toBeNull();
+    // Impossible contact time exceeding step cycle (260 spm -> step is ~231ms; 500ms GCT is impossible)
+    expect(calculateDutyFactor(260, 500)).toBeNull();
+    // Duty factor >= 50% (no flight phase / walking) or < 15% returns null
+    expect(calculateDutyFactor(180, 400)).toBeNull();
   });
 });
 
@@ -129,4 +133,27 @@ describe('calculateRunningEfficiency (presentation)', () => {
     expect(res.aerobicEfficiency!.speedDisplay).toContain('米/秒');
     expect(res.aerobicEfficiency!.speedDisplay).toContain('公里/小时');
   });
+
+  it('preserves valid vertical ratio when ground contact time is NaN or invalid', () => {
+    const res = calculateRunningEfficiency({
+      verticalOscillationCm: 8.2,
+      strideLengthM: 1.15,
+      cadenceSpm: 175,
+      groundContactTimeMs: NaN,
+    });
+
+    // formEconomy must not be dropped just because GCT was NaN
+    expect(res.formEconomy).not.toBeNull();
+    expect(res.formEconomy!.verticalRatioFormatted).toBe('7.1%');
+    expect(res.formEconomy!.verticalRatioLevel).toBeDefined();
+    expect(res.formEconomy!.dutyFactor).toBeUndefined();
+    expect(res.formEconomy!.dutyFactorFormatted).toBeUndefined();
+  });
+
+  it('rejects impossible duty factor levels rather than classifying them into normal tiers', () => {
+    expect(getDutyFactorLevel(108.33)).toBeNull();
+    expect(getDutyFactorLevel(55.0)).toBeNull();
+    expect(getDutyFactorLevel(10.0)).toBeNull();
+  });
 });
+

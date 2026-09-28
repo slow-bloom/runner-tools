@@ -103,14 +103,28 @@ describe('calculateHeartRateZonesRaw', () => {
     expect(zones![0].high).toBe(139);
     expect(zones![0].isLowerOpen).toBe(true);
 
-    // Z2: 85 - 89% LTHR -> 140 - 147
+    // Z2: 85 - 89% LTHR -> 140 - 148 (contiguous with Z3)
     expect(zones![1].low).toBe(140);
-    expect(zones![1].high).toBe(147);
+    expect(zones![1].high).toBe(148);
+
+    // Z3: 90 - 94% LTHR -> 149 - 156 (contiguous with Z4)
+    expect(zones![2].low).toBe(149);
+    expect(zones![2].high).toBe(156);
+
+    // Z4: 95 - 99% LTHR -> 157 - 164 (contiguous with Z5)
+    expect(zones![3].low).toBe(157);
+    expect(zones![3].high).toBe(164);
 
     // Z5: >= 100% LTHR -> low 165, high null
     expect(zones![4].low).toBe(165);
     expect(zones![4].high).toBeNull();
     expect(zones![4].isUpperOpen).toBe(true);
+
+    // Assert that every integer heart rate from 135 to 170 is covered contiguously
+    expect(zones![0].high + 1).toBe(zones![1].low);
+    expect(zones![1].high! + 1).toBe(zones![2].low);
+    expect(zones![2].high! + 1).toBe(zones![3].low);
+    expect(zones![3].high! + 1).toBe(zones![4].low);
   });
 
   it('handles invalid inputs gracefully by returning null', () => {

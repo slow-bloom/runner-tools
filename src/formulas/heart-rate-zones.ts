@@ -148,39 +148,44 @@ export function calculateHeartRateZonesRaw(
       return null;
     }
 
+    const z2Low = Math.round(lthr * 0.85);
+    const z3Low = Math.round(lthr * 0.90);
+    const z4Low = Math.round(lthr * 0.95);
+    const z5Low = Math.round(lthr * 1.00);
+
     return [
       {
         zone: 'z1',
         low: 0,
-        high: Math.round(lthr * 0.85) - 1,
+        high: z2Low - 1,
         minPercent: 0,
         maxPercent: 85,
         isLowerOpen: true,
       },
       {
         zone: 'z2',
-        low: Math.round(lthr * 0.85),
-        high: Math.round(lthr * 0.89),
+        low: z2Low,
+        high: z3Low - 1,
         minPercent: 85,
         maxPercent: 89,
       },
       {
         zone: 'z3',
-        low: Math.round(lthr * 0.90),
-        high: Math.round(lthr * 0.94),
+        low: z3Low,
+        high: z4Low - 1,
         minPercent: 90,
         maxPercent: 94,
       },
       {
         zone: 'z4',
-        low: Math.round(lthr * 0.95),
-        high: Math.round(lthr * 0.99),
+        low: z4Low,
+        high: z5Low - 1,
         minPercent: 95,
         maxPercent: 99,
       },
       {
         zone: 'z5',
-        low: Math.round(lthr * 1.00),
+        low: z5Low,
         high: null,
         minPercent: 100,
         maxPercent: null,

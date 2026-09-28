@@ -172,8 +172,10 @@ const karvonenResult = calculateHeartRateZones({
   restingHR: 60,
 });
 
-console.log(karvonenResult.zones[1]);
-// Zone 2 Easy / Aerobic: { low: 139, high: 151, bpmFormatted: "139 - 151 bpm", pctFormatted: "60 - 70%" }
+if (karvonenResult) {
+  console.log(karvonenResult.zones[1]);
+  // Zone 2 Easy / Aerobic: { low: 139, high: 151, bpmFormatted: "139 - 151 bpm", pctFormatted: "60 - 70%" }
+}
 
 // 2. Lactate Threshold Method
 const lthrResult = calculateHeartRateZones({
@@ -181,8 +183,10 @@ const lthrResult = calculateHeartRateZones({
   lthr: 165,
 });
 
-console.log(lthrResult.zones[4]);
-// Zone 5 Maximum: { low: 165, bpmFormatted: "≥ 165 bpm", pctFormatted: ">= 100%" }
+if (lthrResult) {
+  console.log(lthrResult.zones[4]);
+  // Zone 5 Maximum: { low: 165, bpmFormatted: "≥ 165 bpm", pctFormatted: ">= 100%" }
+}
 ```
 
 ---
@@ -287,7 +291,7 @@ console.log('Efficiency Factor:', result.aerobicEfficiency?.efficiencyFactorForm
 | **Race Predictor** | Base Distance: > 0 m<br>Target Distance: > 0 m<br>Exponent: 1.00 – 1.30 | Times: 5 s – 100 h | Returns `null` for non-positive or infinite values; sanitizes prototype keys |
 | **Heart Rate Zones** | Max HR: 80 – 240 bpm<br>Resting HR: 30 – 120 bpm | Max HR > Resting HR | Throws descriptive error if Resting HR ≥ Max HR |
 | **Age Grading** | Ages: 5 – 100 years | 5K, 10K, Half, Full | Returns `null` for unsupported ages or non-standard distances |
-| **Running Efficiency** | Cadence: 100 – 260 spm<br>GCT: 100 – 500 ms | Ground contact fraction | Skips invalid fields independently; never outputs `NaN` |
+| **Running Efficiency** | Cadence: 100 – 260 spm<br>GCT: 100 – 500 ms | Duty Factor: [15%, 50%)<br>(Flight phase required) | Evaluates metrics independently; rejects impossible contact fractions without flight phase |
 
 ### Primary References
 

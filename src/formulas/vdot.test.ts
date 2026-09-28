@@ -137,4 +137,17 @@ describe('VDOT Formula & Pace Calculations', () => {
     // Completely unphysiological VDOT (> 120) or invalid bracket should return null
     expect(solveTimeForDistance(10000, 130)).toBeNull();
   });
+
+  it('should reject unsupported VDOT scores (> 85 or < 15) and not produce zero-second race predictions', () => {
+    // 400m in 30s produces VDOT ~ 164.9, which is unphysiological and must return null
+    expect(calculateVDOTScore(400, 30)).toBeNull();
+    expect(calculateVDOT({ distanceMeters: 400, timeSeconds: 30 })).toBeNull();
+
+    // Marathon in 12 hours produces VDOT ~ 13.9, which is below physiological VDOT tables (15)
+    expect(calculateVDOTScore(42195, 43200)).toBeNull();
+    expect(calculateVDOT({ distanceMeters: 42195, timeSeconds: 43200 })).toBeNull();
+
+    expect(calculateVDOTPacesRaw(120)).toBeNull();
+    expect(calculateEquivalentTimesRaw(120)).toBeNull();
+  });
 });

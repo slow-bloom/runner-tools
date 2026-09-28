@@ -181,14 +181,17 @@ export function calculateVDOTScore(distanceMeters: number, timeSeconds: number):
   if (fraction <= 0) return null;
   const vdot = vo2 / fraction;
 
-  return Number.isFinite(vdot) && vdot > 0 ? vdot : null;
+  // Validate physiological VDOT domain [15, 85]
+  if (!Number.isFinite(vdot) || vdot < 15 || vdot > 85) return null;
+
+  return vdot;
 }
 
 /**
  * Compute pure numeric pace boundaries for each zone (in seconds per unit)
  */
 export function calculateVDOTPacesRaw(vdot: number, unit: PaceUnit = 'km'): Record<VDOTZoneKey, RawPaceZoneItem> | null {
-  if (!Number.isFinite(vdot) || vdot <= 0) return null;
+  if (!Number.isFinite(vdot) || vdot < 15 || vdot > 85) return null;
 
   const isKm = unit === 'km';
   const unitDistance = isKm ? 1000 : 1609.344;
@@ -230,7 +233,7 @@ export function calculateEquivalentTimesRaw(
   distances: readonly number[] = [5000, 10000, 21097.5, 42195],
   unit: PaceUnit = 'km'
 ): RawEquivalentPerformance[] | null {
-  if (!Number.isFinite(vdot) || vdot <= 0) return null;
+  if (!Number.isFinite(vdot) || vdot < 15 || vdot > 85) return null;
 
   const unitDistance = unit === 'km' ? 1000 : 1609.344;
   const results: RawEquivalentPerformance[] = [];
@@ -307,21 +310,22 @@ export function calculateVDOT(options: CalculateVDOTOptions): VDOTCalculationRes
     vdot,
     STANDARD_RACE_DISTANCES.map((d) => d.meters),
     unit
-  ) ?? [];
-  const rawEquivMap = new Map(rawEquivalents.map((item) => [item.distanceMeters, item]));
+  );
+  if (!rawEquivalents || rawEquivalents.length === 0) return null;
 
-  const equivalentPerformances: EquivalentPerformance[] = STANDARD_RACE_DISTANCES.map((d) => {
-    const rawItem = rawEquivMap.get(d.meters);
-    const predictedSeconds = rawItem ? rawItem.predictedSeconds : 0;
-    const targetPaceSecs = rawItem ? rawItem.targetPaceSecs : 0;
+  const equivalentPerformances: EquivalentPerformance[] = rawEquivalents.map((item) => {
+    const standardDist = STANDARD_RACE_DISTANCES.find((d) => d.meters === item.distanceMeters);
+    const distanceLabel =
+      (standardDist && locale.vdot.standardDistances[standardDist.key]) ||
+      `${(item.distanceMeters / 1000).toFixed(1)} km`;
 
     return {
-      distanceMeters: d.meters,
-      distanceLabel: locale.vdot.standardDistances[d.key] || `${d.meters / 1000} km`,
-      predictedSeconds,
-      timeFormatted: formatTime(predictedSeconds),
-      targetPaceSecs,
-      paceFormatted: formatPace(targetPaceSecs),
+      distanceMeters: item.distanceMeters,
+      distanceLabel,
+      predictedSeconds: item.predictedSeconds,
+      timeFormatted: formatTime(item.predictedSeconds),
+      targetPaceSecs: item.targetPaceSecs,
+      paceFormatted: formatPace(item.targetPaceSecs),
       unit,
     };
   });

@@ -64,8 +64,21 @@ export function calculateDutyFactor(
     return null;
   }
 
+  // A single foot ground contact time cannot exceed or equal single step duration (60000 / cadence)
+  const stepDurationMs = 60000 / cadenceSpm;
+  if (groundContactTimeMs >= stepDurationMs) {
+    return null;
+  }
+
   // Full gait cycle (stride of both feet) duration = 120000 / cadenceSpm
-  return (groundContactTimeMs * cadenceSpm / 120000) * 100;
+  const df = (groundContactTimeMs * cadenceSpm / 120000) * 100;
+
+  // Running duty factor requires a flight phase: [15%, 50%)
+  if (df < 15.0 || df >= 50.0) {
+    return null;
+  }
+
+  return df;
 }
 
 /**
@@ -165,7 +178,10 @@ export function getVerticalRatioLevel(
 export function getDutyFactorLevel(
   df: number,
   options: { locale?: LocaleInput } = {}
-): FormattedDutyFactorLevel {
+): FormattedDutyFactorLevel | null {
+  if (!Number.isFinite(df) || df < 15.0 || df >= 50.0) {
+    return null;
+  }
   const loc = getLocale(options.locale).runningEfficiency.dutyFactor;
 
   if (df < 30.0) {
@@ -247,12 +263,12 @@ export interface RunningEfficiencyParams {
 }
 
 export interface FormEconomyResult {
-  verticalRatio: number;
-  verticalRatioFormatted: string;
-  verticalRatioLevel: FormattedVerticalRatioLevel;
-  dutyFactor: number;
-  dutyFactorFormatted: string;
-  dutyFactorLevel: FormattedDutyFactorLevel;
+  verticalRatio?: number;
+  verticalRatioFormatted?: string;
+  verticalRatioLevel?: FormattedVerticalRatioLevel;
+  dutyFactor?: number;
+  dutyFactorFormatted?: string;
+  dutyFactorLevel?: FormattedDutyFactorLevel;
 }
 
 export interface AerobicEfficiencyResult {
@@ -283,27 +299,37 @@ export function calculateRunningEfficiency(
 ): RunningEfficiencyResult {
   const loc = getLocale(options.locale);
 
-  // 1. Form Economy
+  // 1. Form Economy - evaluate VR and DF independently
   let formEconomy: FormEconomyResult | null = null;
-  if (
-    params.verticalOscillationCm !== undefined &&
-    params.strideLengthM !== undefined &&
-    params.cadenceSpm !== undefined &&
-    params.groundContactTimeMs !== undefined
-  ) {
-    const vr = calculateVerticalRatio(params.verticalOscillationCm, params.strideLengthM);
-    const df = calculateDutyFactor(params.cadenceSpm, params.groundContactTimeMs);
+  const vr =
+    params.verticalOscillationCm !== undefined && params.strideLengthM !== undefined
+      ? calculateVerticalRatio(params.verticalOscillationCm, params.strideLengthM)
+      : null;
+  const df =
+    params.cadenceSpm !== undefined && params.groundContactTimeMs !== undefined
+      ? calculateDutyFactor(params.cadenceSpm, params.groundContactTimeMs)
+      : null;
 
-    if (vr !== null && df !== null) {
-      formEconomy = {
-        verticalRatio: Math.round(vr * 10) / 10,
-        verticalRatioFormatted: `${vr.toFixed(1)}%`,
-        verticalRatioLevel: getVerticalRatioLevel(vr, { locale: options.locale }),
-        dutyFactor: Math.round(df * 10) / 10,
-        dutyFactorFormatted: `${df.toFixed(1)}%`,
-        dutyFactorLevel: getDutyFactorLevel(df, { locale: options.locale }),
-      };
-    }
+  if (vr !== null || df !== null) {
+    const vrLevel = vr !== null ? getVerticalRatioLevel(vr, { locale: options.locale }) : undefined;
+    const dfLevel = df !== null ? getDutyFactorLevel(df, { locale: options.locale }) : undefined;
+
+    formEconomy = {
+      ...(vr !== null && vrLevel
+        ? {
+            verticalRatio: Math.round(vr * 10) / 10,
+            verticalRatioFormatted: `${vr.toFixed(1)}%`,
+            verticalRatioLevel: vrLevel,
+          }
+        : {}),
+      ...(df !== null && dfLevel
+        ? {
+            dutyFactor: Math.round(df * 10) / 10,
+            dutyFactorFormatted: `${df.toFixed(1)}%`,
+            dutyFactorLevel: dfLevel,
+          }
+        : {}),
+    };
   }
 
   // 2. Aerobic Efficiency
