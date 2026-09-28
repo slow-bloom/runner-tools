@@ -12,7 +12,7 @@
 
 Experience these algorithms live in action on the web:
 - **[VDOT & Training Pace Calculator (Live Web Demo)](https://apexrun.app/tools/vdot-calculator/)**
-- **[VDOT 配速计算器 (中文在线版)](https://apexrun.app/zh/tools/vdot-calculator/)**
+- **[Race Predictor (Live Web Demo)](https://apexrun.app/tools/race-predictor/)**
 
 ---
 
@@ -20,7 +20,7 @@ Experience these algorithms live in action on the web:
 
 - **Pure & Zero Dependencies**: 100% pure TypeScript formulas with zero runtime dependencies. Runs anywhere: Node.js, browsers, Bun, Deno, Cloudflare Workers.
 - **Scientifically Grounded**: Implements Daniels & Gilbert's oxygen consumption models, Riegel's endurance power laws, and Karvonen heart rate reserve frameworks.
-- **Built-in i18n**: First-class multilingual support (`en`, `zh`), easily extendable to new languages.
+- **Built-in i18n**: First-class multilingual support with English as default, easily extendable to new languages.
 - **100% Tested**: Rigorously benchmarked against standard racing and physiology datasets.
 
 ---
@@ -83,15 +83,44 @@ const res = calculateVDOT({
   distanceMeters: 5000,
   timeSeconds: 1200,
   unit: 'km', // 'km' or 'mi'
-  lang: 'en', // 'en' or 'zh'
+  lang: 'en',
 });
 
 console.log('VDOT:', res.vdotFormatted); // "49.8"
 console.log('Easy Pace:', `${res.zones.E.lowPaceFormatted} - ${res.zones.E.highPaceFormatted} /km`);
 // e.g. "5'05" - 5'41" /km"
+```
 
-console.log('Predicted Marathon Time:', res.equivalentPerformances.find(p => p.distanceMeters === 42195)?.timeFormatted);
-// e.g. "3:13:42"
+---
+
+### 2. Peter Riegel Race Predictor (`race-predictor`)
+
+Predicts race finish times and target paces across arbitrary distances using Peter Riegel's power law formula:
+
+$$T_2 = T_1 \times \left(\frac{D_2}{D_1}\right)^b$$
+
+Where $b$ represents the endurance fatigue exponent:
+- `1.06`: Standard Riegel factor (high aerobic base, well-trained runners)
+- `1.08`: Recreational runners (moderate weekly mileage)
+- `1.10`: Novice runners / low weekly mileage
+
+#### Usage
+
+```typescript
+import { calculateRacePredictions } from '@slowbloom/runner-tools';
+
+// Predict marathon performance from a 10K in 45 minutes
+const result = calculateRacePredictions({
+  baseDistanceMeters: 10000,
+  baseTimeSeconds: 2700,
+  exponent: 1.06,
+  unit: 'km',
+});
+
+console.log('Half Marathon:', result.predictions.find(p => p.key === 'halfMarathon')?.timeFormatted);
+// "1:39:17"
+console.log('Marathon:', result.predictions.find(p => p.key === 'marathon')?.timeFormatted);
+// "3:27:01"
 ```
 
 ---
@@ -99,7 +128,7 @@ console.log('Predicted Marathon Time:', res.equivalentPerformances.find(p => p.d
 ## Roadmap
 
 - [x] Jack Daniels VDOT & Training Paces Engine
-- [ ] Riegel Race Performance Predictor
+- [x] Peter Riegel Race Performance Predictor
 - [ ] Karvonen Heart Rate Reserve Zones
 - [ ] Age-Graded Scoring (WMA Tables)
 - [ ] Running Efficiency & Heart Rate Decoupling (EF / Pw:Hr)
