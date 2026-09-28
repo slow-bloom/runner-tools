@@ -14,13 +14,14 @@ Experience these algorithms live in action on the web:
 - **[VDOT & Training Pace Calculator (Live Web Demo)](https://apexrun.fit/tools/vdot-calculator/)**
 - **[Race Predictor (Live Web Demo)](https://apexrun.fit/tools/race-predictor/)**
 - **[Heart Rate Zones Calculator (Live Web Demo)](https://apexrun.fit/tools/heart-rate-zones-calculator/)**
+- **[Age-Grading Calculator (Live Web Demo)](https://apexrun.fit/tools/age-grading-calculator/)**
 
 ---
 
 ## Highlights
 
 - **Pure & Zero Dependencies**: 100% pure TypeScript formulas with zero runtime dependencies. Runs anywhere: Node.js, browsers, Bun, Deno, Cloudflare Workers.
-- **Scientifically Grounded**: Implements Daniels & Gilbert's oxygen consumption models, Riegel's endurance power laws, and Karvonen heart rate reserve equations.
+- **Scientifically Grounded**: Implements Daniels & Gilbert's oxygen consumption models, Riegel's endurance power laws, Karvonen heart rate reserve equations, and World Masters Athletics (WMA) road standards.
 - **Built-in i18n & Extensible**: Multilingual support with hierarchical locale fallback (exact tag -> base language -> English default) and custom dictionary registration.
 - **Unit Tested**: Rigorously benchmarked against standard racing records and numerical boundary conditions.
 
@@ -178,12 +179,49 @@ console.log(lthrResult.zones[4]);
 
 ---
 
+### 4. Age-Graded Calculator (`age-grading`)
+
+Evaluates performance against official **World Masters Athletics (WMA) 2020 Road Standards** across standard distances (5K, 10K, Half Marathon, Marathon) for athletes aged 5 to 100:
+
+$$\text{Age-Graded Score (\%)} = \left(\frac{\text{WMA Age Standard Time}}{\text{Finish Time}}\right) \times 100\%$$
+
+$$\text{Age-Graded Equivalent Time} = \text{Finish Time} \times \left(\frac{\text{WMA Open Standard Time}}{\text{WMA Age Standard Time}}\right)$$
+
+#### Master Athlete Performance Tiers
+
+- **≥ 90%**: World Class
+- **80% – 89.9%**: National Class
+- **70% – 79.9%**: Regional Class
+- **60% – 69.9%**: Local Class
+- **50% – 59.9%**: Active Runner
+- **< 50%**: Recreational Runner
+
+#### Usage
+
+```typescript
+import { calculateAgeGrading, calculateAgeGradingRaw } from '@slow-bloom/runner-tools';
+
+// Calculate age grading
+const result = calculateAgeGrading({
+  gender: 'M',
+  age: 40,
+  distance: '21097', // 5000, 10000, 21097, 42195 or 'halfMarathon'
+  timeSeconds: 6540, // 1h 49m 0s
+});
+
+console.log('Score:', result.scoreFormatted); // e.g. "55.5%"
+console.log('Level:', result.level.label); // "Active Runner"
+console.log('Open Equivalent:', result.ageEquivalentTimeFormatted); // e.g. "1:45:08"
+```
+
+---
+
 ## Roadmap
 
 - [x] Jack Daniels VDOT & Training Paces Engine
 - [x] Peter Riegel Race Performance Predictor
 - [x] Heart Rate Zones (Max HR, Karvonen HRR, LTHR)
-- [ ] Age-Graded Scoring (WMA Tables)
+- [x] Age-Graded Scoring (WMA Tables)
 - [ ] Running Efficiency & Heart Rate Decoupling (EF / Pw:Hr)
 - [ ] Browser-based FIT / GPX / TCX Parser & Converter (Zero Server Uploads)
 - [ ] GPS Drift & Ghost Mileage Analyzer
