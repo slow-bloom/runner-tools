@@ -119,4 +119,41 @@ export const zhLocale: RunnerToolsLocale = {
       standardNotFound: '未找到该年龄与距离的官方世界纪录标准。',
     },
   },
+  runningEfficiency: {
+    verticalRatio: {
+      elite: {
+        label: '顶尖精英 (< 6.0%)',
+        desc: '卓越的水平转化率，几乎零多余垂直颠簸浪费。',
+      },
+      advanced: {
+        label: '优秀进阶 (6.0% ～ 8.0%)',
+        desc: '非常经济的跑姿步态，成熟马拉松跑者的典型区间。',
+      },
+      average: {
+        label: '大众平均 (8.1% ～ 10.0%)',
+        desc: '存在轻微能量垂直浪费，适当提高 5 spm 步频可收紧起伏轨迹。',
+      },
+      needsImprovement: {
+        label: '有待改善 (> 10.0%)',
+        desc: '垂直颠簸过大或跨大步刹车，严重损耗向前推进动能。',
+      },
+    },
+    dutyFactor: {
+      elite: '顶尖弹性蓄能 (< 30%)',
+      advanced: '进阶腾空相 (30% ～ 39%)',
+      recreational: '大众基础级 (40% ～ 50%)',
+    },
+    efficiencyFactor: {
+      developing: '有氧基础初建期 (< 1.10)',
+      solid: '扎实有氧平台期 (1.10 ～ 1.35)',
+      advanced: '高阶有氧发动机 (1.36 ～ 1.60)',
+      elite: '精英级心泵能力 (> 1.60)',
+      unitLabel: '米/跳',
+      metersPerBeat: '米/心跳',
+    },
+    speed: {
+      metersPerSec: '米/秒',
+      kmPerHour: '公里/小时',
+    },
+  },
 };

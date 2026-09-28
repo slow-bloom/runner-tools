@@ -33,6 +33,32 @@ export interface AgeGradingI18n {
   };
 }
 
+export interface RunningEfficiencyI18n {
+  verticalRatio: {
+    elite: { label: string; desc: string };
+    advanced: { label: string; desc: string };
+    average: { label: string; desc: string };
+    needsImprovement: { label: string; desc: string };
+  };
+  dutyFactor: {
+    elite: string;
+    advanced: string;
+    recreational: string;
+  };
+  efficiencyFactor: {
+    developing: string;
+    solid: string;
+    advanced: string;
+    elite: string;
+    unitLabel: string;
+    metersPerBeat: string;
+  };
+  speed: {
+    metersPerSec: string;
+    kmPerHour: string;
+  };
+}
+
 export interface RunnerToolsLocale {
   locale: string;
   vdot: {
@@ -89,6 +115,7 @@ export interface RunnerToolsLocale {
     };
   };
   ageGrading: AgeGradingI18n;
+  runningEfficiency: RunningEfficiencyI18n;
 }
 
 export const enLocale: RunnerToolsLocale = {
@@ -208,6 +235,43 @@ export const enLocale: RunnerToolsLocale = {
       ageOutOfRange: 'Age must be between 5 and 100.',
       invalidTime: 'Please enter a valid finish time.',
       standardNotFound: 'Age standard not found for this age and distance.',
+    },
+  },
+  runningEfficiency: {
+    verticalRatio: {
+      elite: {
+        label: 'Elite (< 6.0%)',
+        desc: 'Exceptional efficiency. Almost zero wasted upward vertical bounce.',
+      },
+      advanced: {
+        label: 'Good / Advanced (6.0% – 8.0%)',
+        desc: 'Very economical stride. Typical of well-conditioned distance runners.',
+      },
+      average: {
+        label: 'Average (8.1% – 10.0%)',
+        desc: 'Moderate energy leak. Nudging cadence upward 5 spm can tighten your bounce.',
+      },
+      needsImprovement: {
+        label: 'Needs Improvement (> 10.0%)',
+        desc: 'Excessive vertical bounce or short overstriding. Wasting forward drive.',
+      },
+    },
+    dutyFactor: {
+      elite: 'Elite Elastic Recoil (< 30%)',
+      advanced: 'Advanced Flight Phase (30% – 39%)',
+      recreational: 'Recreational Level (40% – 50%)',
+    },
+    efficiencyFactor: {
+      developing: 'Developing Base (< 1.10)',
+      solid: 'Solid Aerobic Base (1.10 – 1.35)',
+      advanced: 'Advanced Aerobic Engine (1.36 – 1.60)',
+      elite: 'Elite Aerobic Capacity (> 1.60)',
+      unitLabel: 'm/beat',
+      metersPerBeat: 'meters per heartbeat',
+    },
+    speed: {
+      metersPerSec: 'm/s',
+      kmPerHour: 'km/h',
     },
   },
 };
