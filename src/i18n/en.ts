@@ -116,6 +116,45 @@ export interface RunnerToolsLocale {
   };
   ageGrading: AgeGradingI18n;
   runningEfficiency: RunningEfficiencyI18n;
+  pace: {
+    units: {
+      minPerKm: string;
+      minPerMi: string;
+      kmPerHour: string;
+      milesPerHour: string;
+      metersPerSec: string;
+      km: string;
+      mi: string;
+    };
+    labels: {
+      distance: string;
+      pace: string;
+      time: string;
+      finishTime: string;
+      speed: string;
+      targetPace: string;
+    };
+    distances: {
+      k5: string;
+      k10: string;
+      halfMarathon: string;
+      marathon: string;
+    };
+  };
+  weeklyMileage: {
+    status: {
+      base: string;
+      build: string;
+      deload: string;
+      target: string;
+    };
+    labels: {
+      week: string;
+      distance: string;
+      status: string;
+      change: string;
+    };
+  };
 }
 
 export const enLocale: RunnerToolsLocale = {
@@ -272,6 +311,45 @@ export const enLocale: RunnerToolsLocale = {
     speed: {
       metersPerSec: 'm/s',
       kmPerHour: 'km/h',
+    },
+  },
+  pace: {
+    units: {
+      minPerKm: 'min/km',
+      minPerMi: 'min/mi',
+      kmPerHour: 'km/h',
+      milesPerHour: 'mph',
+      metersPerSec: 'm/s',
+      km: 'km',
+      mi: 'mi',
+    },
+    labels: {
+      distance: 'Distance',
+      pace: 'Pace',
+      time: 'Time',
+      finishTime: 'Finish Time',
+      speed: 'Speed',
+      targetPace: 'Target Pace',
+    },
+    distances: {
+      k5: '5K',
+      k10: '10K',
+      halfMarathon: 'Half Marathon',
+      marathon: 'Marathon',
+    },
+  },
+  weeklyMileage: {
+    status: {
+      base: 'Baseline',
+      build: 'Build',
+      deload: 'Recovery Deload',
+      target: 'Target Achieved',
+    },
+    labels: {
+      week: 'Week',
+      distance: 'Weekly Distance',
+      status: 'Status',
+      change: 'Change',
     },
   },
 };

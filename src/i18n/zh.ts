@@ -156,4 +156,43 @@ export const zhLocale: RunnerToolsLocale = {
       kmPerHour: '公里/小时',
     },
   },
+  pace: {
+    units: {
+      minPerKm: '分/公里',
+      minPerMi: '分/英里',
+      kmPerHour: '公里/小时',
+      milesPerHour: '英里/小时',
+      metersPerSec: '米/秒',
+      km: '公里',
+      mi: '英里',
+    },
+    labels: {
+      distance: '跑步距离',
+      pace: '配速',
+      time: '用时',
+      finishTime: '完赛用时',
+      speed: '时速',
+      targetPace: '目标配速',
+    },
+    distances: {
+      k5: '5 公里 (5K)',
+      k10: '10 公里 (10K)',
+      halfMarathon: '半程马拉松 (21.0975 公里)',
+      marathon: '全程马拉松 (42.195 公里)',
+    },
+  },
+  weeklyMileage: {
+    status: {
+      base: '基准跑量',
+      build: '跑量增长',
+      deload: '减量恢复周',
+      target: '达成目标',
+    },
+    labels: {
+      week: '周次',
+      distance: '周总跑量',
+      status: '阶段状态',
+      change: '环比增幅',
+    },
+  },
 };

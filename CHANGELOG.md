@@ -15,5 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Heart Rate Zones (`heart-rate-zones`)**: Max HR percentage, Karvonen Heart Rate Reserve (HRR), and Joe Friel Lactate Threshold (LTHR) 5-zone models, with Fox, Tanaka, and Gellish max HR age formulas.
 - **Age-Graded Scoring (`age-grading`)**: Official World Masters Athletics (WMA) 2020 Road Running standards for ages 5–100 across 5K, 10K, Half Marathon, and Marathon distances.
 - **Running Efficiency & Biomechanics (`running-efficiency`)**: Vertical Ratio (VR), Ground Contact Duty Factor (DF), and Joe Friel Aerobic Efficiency Factor (EF).
+- **Pace & Speed Calculator / Converter (`pace`)**: Three-way distance/pace/time solving, cross-unit speed conversions, and split projections for standard road distances.
+- **Weekly Mileage Ramp-Up Planner (`weekly-mileage`)**: Safe volume progression implementing the 10% rule and structured deload recovery cycles.
 - **Internationalization (`i18n`)**: Hierarchical locale resolution with deep partial merging over `enLocale`.
 - **Packaging & Dual Module Output**: ESM (`.js` + `.d.ts`) and CommonJS (`.cjs` + `.d.cts`) for full TypeScript `node16` / `nodenext` compatibility, plus standalone browser bundle (`runner-tools.global.js`) preserving MIT legal banner.
+

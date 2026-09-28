@@ -16,6 +16,9 @@ Experience these algorithms live in action on the web:
 - **[Heart Rate Zones Calculator (Live Web Demo)](https://apexrun.fit/tools/heart-rate-zones-calculator/)**
 - **[Age-Grading Calculator (Live Web Demo)](https://apexrun.fit/tools/age-grading-calculator/)**
 - **[Running Efficiency Calculator (Live Web Demo)](https://apexrun.fit/tools/running-efficiency-calculator/)**
+- **[Pace & Split Calculator (Live Web Demo)](https://apexrun.fit/tools/pace-calculator/)**
+- **[Pace & Speed Converter (Live Web Demo)](https://apexrun.fit/tools/pace-converter/)**
+- **[Weekly Mileage Ramp-Up Calculator (Live Web Demo)](https://apexrun.fit/tools/weekly-mileage-calculator/)**
 
 ---
 
@@ -281,6 +284,74 @@ console.log('Efficiency Factor:', result.aerobicEfficiency?.efficiencyFactorForm
 
 ---
 
+### 6. Pace & Speed Calculations (`pace`)
+
+Comprehensive calculations for pace solving, speed conversions, and split projections across metric and imperial systems.
+
+#### Usage
+
+```typescript
+import {
+  calculatePace,
+  calculateTime,
+  calculateDistance,
+  convertPace,
+  solvePace,
+} from '@slow-bloom/runner-tools';
+
+// 1. Pure calculations
+const paceSecs = calculatePace(10, 2700); // 270 s/km (4'30" /km)
+const totalTime = calculateTime(10, 270); // 2700 seconds
+
+// 2. Pace & Speed Conversion across units
+const converted = convertPace({ paceSeconds: 300, paceUnit: 'km' });
+if (converted) {
+  console.log('min/km:', converted.paceKmFormatted); // "5'00\""
+  console.log('min/mi:', converted.paceMiFormatted); // "8'03\""
+  console.log('km/h:', converted.speedKmh); // 12.0
+  console.log('mph:', converted.speedMph); // 7.46
+  console.log('5K finish:', converted.splits[0].timeFormatted); // "25:00"
+}
+
+// 3. Three-way Solver (provide any 2 of distance, pace, time)
+const solved = solvePace({ distance: 10, timeSeconds: 2700, unit: 'km' });
+if (solved) {
+  console.log('Solved Field:', solved.solvedField); // "pace"
+  console.log('Calculated Pace:', solved.paceFormatted); // "4'30\""
+}
+```
+
+---
+
+### 7. Weekly Mileage Ramp-Up Planner (`weekly-mileage`)
+
+Generates structured, progressive running volume plans based on the classical 10% rule and structured deload recovery cycles.
+
+#### Usage
+
+```typescript
+import { calculateWeeklyMileagePlan } from '@slow-bloom/runner-tools';
+
+const plan = calculateWeeklyMileagePlan({
+  currentDistance: 25,
+  targetDistance: 50,
+  unit: 'km',
+  maxWeeklyIncreasePct: 10, // 10% weekly build
+  includeDeload: true,      // Deload every 4th week
+  deloadFrequency: 4,
+  deloadReductionPct: 20,   // -20% recovery volume
+});
+
+if (plan) {
+  console.log('Total Weeks:', plan.totalWeeks); // e.g. 8
+  for (const week of plan.weeks) {
+    console.log(`Week ${week.weekNumber}: ${week.distanceFormatted} (${week.statusLabel})`);
+  }
+}
+```
+
+---
+
 ## Scientific Foundations & Operational Boundaries
 
 ### Operating Ranges and Assumptions
@@ -292,6 +363,8 @@ console.log('Efficiency Factor:', result.aerobicEfficiency?.efficiencyFactorForm
 | **Heart Rate Zones** | Max HR: 80 – 240 bpm<br>Resting HR: 30 – 120 bpm | Max HR > Resting HR | Throws descriptive error if Resting HR ≥ Max HR |
 | **Age Grading** | Ages: 5 – 100 years | 5K, 10K, Half, Full | Returns `null` for unsupported ages or non-standard distances |
 | **Running Efficiency** | Cadence: 100 – 260 spm<br>GCT: 100 – 500 ms | Duty Factor: [15%, 50%)<br>(Flight phase required) | Evaluates metrics independently; rejects impossible contact fractions without flight phase |
+| **Pace Solver** | Distance: 0.01 – 10,000<br>Pace: 60 – 3600 s/unit | Exactly 2 of 3 inputs | Returns `null` if inputs ambiguous or out of physiological running bounds |
+| **Weekly Mileage** | Volume: 1 – 500 distance units<br>Increase: 1% – 50% | Target ≥ Current | Generates progressive overload cycles up to 52 weeks |
 
 ### Primary References
 
