@@ -163,7 +163,7 @@ describe('calculateHeartRateZones (presentation)', () => {
     );
     expect(res).not.toBeNull();
     expect(res!.zones[0].categoryName).toBe('恢复排酸');
-    expect(res!.zones[0].bpmFormatted).toBe('< 139 bpm');
+    expect(res!.zones[0].bpmFormatted).toBe('≤ 139 bpm');
     expect(res!.zones[0].pctFormatted).toBe('< 85%');
     expect(res!.zones[0].basisFormatted).toBe('LTHR 比例');
 

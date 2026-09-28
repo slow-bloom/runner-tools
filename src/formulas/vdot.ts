@@ -166,6 +166,20 @@ export function solveTimeForDistance(distanceMeters: number, vdot: number): numb
   return t * 60;
 }
 
+// Operational physiological bounds with solver numerical tolerance
+const VDOT_MIN = 15.0;
+const VDOT_MAX = 85.0;
+const VDOT_EPSILON = 1e-4;
+
+function normalizeVDOT(vdot: number): number | null {
+  if (!Number.isFinite(vdot) || vdot < VDOT_MIN - VDOT_EPSILON || vdot > VDOT_MAX + VDOT_EPSILON) {
+    return null;
+  }
+  if (vdot > VDOT_MAX) return VDOT_MAX;
+  if (vdot < VDOT_MIN) return VDOT_MIN;
+  return vdot;
+}
+
 /**
  * Compute raw VDOT numerical score without presentation wrapping
  */
@@ -179,19 +193,17 @@ export function calculateVDOTScore(distanceMeters: number, timeSeconds: number):
   const fraction = calculateDropDeadFraction(timeMinutes);
 
   if (fraction <= 0) return null;
-  const vdot = vo2 / fraction;
+  const rawVdot = vo2 / fraction;
 
-  // Validate physiological VDOT domain [15, 85]
-  if (!Number.isFinite(vdot) || vdot < 15 || vdot > 85) return null;
-
-  return vdot;
+  return normalizeVDOT(rawVdot);
 }
 
 /**
  * Compute pure numeric pace boundaries for each zone (in seconds per unit)
  */
 export function calculateVDOTPacesRaw(vdot: number, unit: PaceUnit = 'km'): Record<VDOTZoneKey, RawPaceZoneItem> | null {
-  if (!Number.isFinite(vdot) || vdot < 15 || vdot > 85) return null;
+  const normalizedVdot = normalizeVDOT(vdot);
+  if (normalizedVdot === null) return null;
 
   const isKm = unit === 'km';
   const unitDistance = isKm ? 1000 : 1609.344;
@@ -200,11 +212,11 @@ export function calculateVDOTPacesRaw(vdot: number, unit: PaceUnit = 'km'): Reco
 
   for (const key of zoneKeys) {
     const config = VDOT_ZONE_CONFIGS[key];
-    const vo2Low = config.lowPct * vdot;
+    const vo2Low = config.lowPct * normalizedVdot;
     const vLow = solveVelocityForVO2(vo2Low);
     const slowPaceSecs = vLow > 0 ? (unitDistance / vLow) * 60 : 0;
 
-    const vo2High = config.highPct * vdot;
+    const vo2High = config.highPct * normalizedVdot;
     const vHigh = solveVelocityForVO2(vo2High);
     const fastPaceSecs = vHigh > 0 ? (unitDistance / vHigh) * 60 : 0;
 
@@ -233,14 +245,15 @@ export function calculateEquivalentTimesRaw(
   distances: readonly number[] = [5000, 10000, 21097.5, 42195],
   unit: PaceUnit = 'km'
 ): RawEquivalentPerformance[] | null {
-  if (!Number.isFinite(vdot) || vdot < 15 || vdot > 85) return null;
+  const normalizedVdot = normalizeVDOT(vdot);
+  if (normalizedVdot === null) return null;
 
   const unitDistance = unit === 'km' ? 1000 : 1609.344;
   const results: RawEquivalentPerformance[] = [];
 
   for (const dist of distances) {
     if (!Number.isFinite(dist) || dist <= 0) continue;
-    const predictedSeconds = solveTimeForDistance(dist, vdot);
+    const predictedSeconds = solveTimeForDistance(dist, normalizedVdot);
     if (predictedSeconds === null) continue;
     const targetPaceSecs = predictedSeconds / (dist / unitDistance);
 

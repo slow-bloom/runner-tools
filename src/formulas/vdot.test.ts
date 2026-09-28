@@ -150,4 +150,26 @@ describe('VDOT Formula & Pace Calculations', () => {
     expect(calculateVDOTPacesRaw(120)).toBeNull();
     expect(calculateEquivalentTimesRaw(120)).toBeNull();
   });
+
+  it('should support round-trip calculations for physiological endpoints (VDOT 85 and VDOT 15)', () => {
+    // VDOT 85 5K prediction round-trip
+    const eq85 = calculateEquivalentTimesRaw(85, [5000]);
+    expect(eq85).not.toBeNull();
+    expect(eq85![0]).toBeDefined();
+    const score85 = calculateVDOTScore(5000, eq85![0].predictedSeconds);
+    expect(score85).not.toBeNull();
+    expect(score85!).toBeCloseTo(85.0, 1);
+
+    // VDOT 15 Half Marathon & Marathon prediction round-trips
+    const eq15 = calculateEquivalentTimesRaw(15, [21097.5, 42195]);
+    expect(eq15).not.toBeNull();
+    const score15Half = calculateVDOTScore(21097.5, eq15![0].predictedSeconds);
+    expect(score15Half).not.toBeNull();
+    expect(score15Half!).toBeCloseTo(15.0, 1);
+
+    const score15Full = calculateVDOTScore(42195, eq15![1].predictedSeconds);
+    expect(score15Full).not.toBeNull();
+    expect(score15Full!).toBeCloseTo(15.0, 1);
+  });
 });
+

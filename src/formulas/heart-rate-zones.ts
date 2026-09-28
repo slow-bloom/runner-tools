@@ -226,7 +226,7 @@ export function calculateHeartRateZones(
 
     if (params.method === 'lthr') {
       if (r.isLowerOpen) {
-        bpmFormatted = `< ${r.high} bpm`;
+        bpmFormatted = `≤ ${r.high} bpm`;
         pctFormatted = `< 85%`;
       } else if (r.isUpperOpen) {
         bpmFormatted = `≥ ${r.low} bpm`;
