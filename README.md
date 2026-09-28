@@ -13,13 +13,14 @@
 Experience these algorithms live in action on the web:
 - **[VDOT & Training Pace Calculator (Live Web Demo)](https://apexrun.fit/tools/vdot-calculator/)**
 - **[Race Predictor (Live Web Demo)](https://apexrun.fit/tools/race-predictor/)**
+- **[Heart Rate Zones Calculator (Live Web Demo)](https://apexrun.fit/tools/heart-rate-zones-calculator/)**
 
 ---
 
 ## Highlights
 
 - **Pure & Zero Dependencies**: 100% pure TypeScript formulas with zero runtime dependencies. Runs anywhere: Node.js, browsers, Bun, Deno, Cloudflare Workers.
-- **Scientifically Grounded**: Implements Daniels & Gilbert's oxygen consumption models and Riegel's endurance power laws.
+- **Scientifically Grounded**: Implements Daniels & Gilbert's oxygen consumption models, Riegel's endurance power laws, and Karvonen heart rate reserve equations.
 - **Built-in i18n & Extensible**: Multilingual support with hierarchical locale fallback (exact tag -> base language -> English default) and custom dictionary registration.
 - **Unit Tested**: Rigorously benchmarked against standard racing records and numerical boundary conditions.
 
@@ -131,11 +132,57 @@ console.log('Marathon:', result.predictions.find(p => p.key === 'marathon')?.tim
 
 ---
 
+### 3. Heart Rate Zones (`heart-rate-zones`)
+
+Calculates 5 targeted training zones based on three physiological reference models:
+- **Max HR %**: 50-60%, 60-70%, 70-80%, 80-90%, 90-100% of maximum heart rate.
+- **Karvonen (HRR)**: Incorporates resting heart rate to compute Heart Rate Reserve: $\text{Target HR} = \text{Resting HR} + (\text{Max HR} - \text{Resting HR}) \times \text{Intensity}$.
+- **Lactate Threshold (LTHR)**: Joe Friel's 5-zone model referenced from functional threshold heart rate.
+
+Includes age estimation models:
+- Fox: $220 - \text{age}$
+- Tanaka: $208 - 0.7 \times \text{age}$
+- Gellish: $207 - 0.7 \times \text{age}$
+
+#### Usage
+
+```typescript
+import {
+  calculateHeartRateZones,
+  calculateHeartRateZonesRaw,
+  estimateMaxHR,
+} from '@slow-bloom/runner-tools';
+
+// Estimate Max HR
+const estMax = estimateMaxHR(30, 'fox'); // 190
+
+// 1. Karvonen Method
+const karvonenResult = calculateHeartRateZones({
+  method: 'karvonen',
+  maxHR: 190,
+  restingHR: 60,
+});
+
+console.log(karvonenResult.zones[1]);
+// Zone 2 Easy / Aerobic: { low: 139, high: 151, bpmFormatted: "139 - 151 bpm", pctFormatted: "60 - 70%" }
+
+// 2. Lactate Threshold Method
+const lthrResult = calculateHeartRateZones({
+  method: 'lthr',
+  lthr: 165,
+});
+
+console.log(lthrResult.zones[4]);
+// Zone 5 Maximum: { low: 165, bpmFormatted: "≥ 165 bpm", pctFormatted: ">= 100%" }
+```
+
+---
+
 ## Roadmap
 
 - [x] Jack Daniels VDOT & Training Paces Engine
 - [x] Peter Riegel Race Performance Predictor
-- [ ] Karvonen Heart Rate Reserve Zones
+- [x] Heart Rate Zones (Max HR, Karvonen HRR, LTHR)
 - [ ] Age-Graded Scoring (WMA Tables)
 - [ ] Running Efficiency & Heart Rate Decoupling (EF / Pw:Hr)
 - [ ] Browser-based FIT / GPX / TCX Parser & Converter (Zero Server Uploads)
