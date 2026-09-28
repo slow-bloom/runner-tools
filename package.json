@@ -32,7 +32,7 @@
     "garmin",
     "apple-watch"
   ],
-  "author": "Slowbloom Studio",
+  "author": "Slowbloom Studio <chenhaomm@sina.com>",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.0.0",
