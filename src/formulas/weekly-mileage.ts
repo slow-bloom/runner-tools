@@ -38,8 +38,24 @@ export interface WeeklyMileageResult {
 }
 
 /**
- * Pure calculation: safely ramp up weekly running volume
- * Implements the 10% rule and structured deload recovery cycles.
+ * Progressive weekly running volume planner based on the classical 10% rule
+ * and structured periodization deload recovery cycles.
+ *
+ * Scientific Basis & Provenance:
+ * - 10% Volume Progression Heuristic: Popularized by Henderson (1979) and Dr. Joan Ullyot,
+ *   and discussed extensively by Daniels (2014, Daniels' Running Formula, 3rd ed.). While widely
+ *   adopted in endurance coaching, epidemiological research (Nielsen et al., 2014, "The 10% increase
+ *   rule for preventing running-related injuries...", J Orthop Sports Phys Ther, 44(10):739-747)
+ *   indicates that a volume increase cap alone does not guarantee injury immunity.
+ * - Deload Cycles & Workload Management: Systematic recovery weeks (reducing volume by 20–30%
+ *   every 3–4 weeks) follow foundational athletic periodization principles (Bompa & Haff, 2009,
+ *   Periodization: Theory and Methodology of Training; Gabbett, 2016, "The training—injury prevention
+ *   paradox...", Br J Sports Med, 50(5):273-280) to lower acute fatigue while consolidating tissue adaptation.
+ *
+ * Important Disclaimer:
+ * This model provides a mathematical periodization guideline for training progression.
+ * It is a heuristic planning tool, NOT an individual safety guarantee or medical prescription
+ * against running-related injuries (RRI).
  */
 export function calculateWeeklyMileagePlan(
   params: WeeklyMileageParams
@@ -57,18 +73,20 @@ export function calculateWeeklyMileagePlan(
 
   if (
     !Number.isFinite(currentDistance) ||
-    currentDistance <= 0 ||
+    currentDistance < 1 ||
+    currentDistance > 500 ||
     !Number.isFinite(targetDistance) ||
-    targetDistance <= 0 ||
+    targetDistance < 1 ||
+    targetDistance > 500 ||
     targetDistance < currentDistance ||
     !Number.isFinite(maxWeeklyIncreasePct) ||
-    maxWeeklyIncreasePct <= 0 ||
+    maxWeeklyIncreasePct < 1 ||
     maxWeeklyIncreasePct > 50 ||
     !Number.isFinite(deloadFrequency) ||
     deloadFrequency < 2 ||
     !Number.isFinite(deloadReductionPct) ||
-    deloadReductionPct <= 0 ||
-    deloadReductionPct >= 80
+    deloadReductionPct < 5 ||
+    deloadReductionPct > 50
   ) {
     return null;
   }
@@ -80,36 +98,41 @@ export function calculateWeeklyMileagePlan(
     deload: loc.weeklyMileage.status.deload,
     target: loc.weeklyMileage.status.target,
   };
+  const unitLabel = unit === 'km' ? loc.weeklyMileage.units.km : loc.weeklyMileage.units.mi;
+
+  const formatDistanceNumber = (val: number): string => {
+    const rounded = Math.round(val * 100) / 100;
+    return rounded.toString();
+  };
 
   const weeks: WeeklyPlanItem[] = [];
 
-  // Week 1: Baseline
-  let currentVol = Math.round(currentDistance * 10) / 10;
-  let previousBuildVol = currentVol;
+  let rawBuildVol = currentDistance;
+  const initialDistance = Math.round(currentDistance * 100) / 100;
 
   weeks.push({
     weekNumber: 1,
-    distance: currentVol,
-    distanceFormatted: `${currentVol.toFixed(1)} ${unit}`,
-    status: currentVol >= targetDistance ? 'target' : 'base',
-    statusLabel: currentVol >= targetDistance ? statusLabels.target : statusLabels.base,
+    distance: initialDistance,
+    distanceFormatted: `${formatDistanceNumber(initialDistance)} ${unitLabel}`,
+    status: initialDistance >= targetDistance ? 'target' : 'base',
+    statusLabel: initialDistance >= targetDistance ? statusLabels.target : statusLabels.base,
     pctChange: 0,
     pctChangeFormatted: '—',
     isDeload: false,
-    isTarget: currentVol >= targetDistance,
+    isTarget: initialDistance >= targetDistance,
   });
 
-  if (currentVol >= targetDistance) {
+  if (initialDistance >= targetDistance) {
     return {
       currentDistance,
       targetDistance,
       unit,
       totalWeeks: 1,
       weeks,
-      maxVolume: currentVol,
-      averageWeeklyVolume: currentVol,
-      totalDistance: currentVol,
-      timelineSummary: `1 Week`,
+      maxVolume: initialDistance,
+      averageWeeklyVolume: initialDistance,
+      totalDistance: initialDistance,
+      timelineSummary: `1 ${loc.weeklyMileage.labels.week}`,
     };
   }
 
@@ -125,18 +148,26 @@ export function calculateWeeklyMileagePlan(
 
     if (isDeload) {
       status = 'deload';
-      weekVol = Math.round(previousBuildVol * (1 - deloadReductionPct / 100) * 10) / 10;
+      const rawDeload = rawBuildVol * (1 - deloadReductionPct / 100);
+      weekVol = Math.round(rawDeload * 100) / 100;
     } else {
-      const projected = Math.round(previousBuildVol * (1 + maxWeeklyIncreasePct / 100) * 10) / 10;
-      if (projected >= targetDistance) {
-        weekVol = targetDistance;
+      const nextRawBuild = rawBuildVol * (1 + maxWeeklyIncreasePct / 100);
+      if (nextRawBuild >= targetDistance) {
+        rawBuildVol = targetDistance;
+        weekVol = Math.round(targetDistance * 100) / 100;
         status = 'target';
         isTarget = true;
       } else {
-        weekVol = projected;
+        rawBuildVol = nextRawBuild;
+        let rounded = Math.round(nextRawBuild * 100) / 100;
+        // Ensure displayed prescription does not exceed configured increase cap due to rounding
+        const prevVol = weeks[weeks.length - 1].distance;
+        if (rounded > prevVol * (1 + maxWeeklyIncreasePct / 100) + 1e-9) {
+          rounded = Math.floor(nextRawBuild * 100) / 100;
+        }
+        weekVol = rounded;
         status = 'build';
       }
-      previousBuildVol = weekVol;
     }
 
     const prevWeekVol = weeks[weeks.length - 1].distance;
@@ -146,7 +177,7 @@ export function calculateWeeklyMileagePlan(
     weeks.push({
       weekNumber: weekNum,
       distance: weekVol,
-      distanceFormatted: `${weekVol.toFixed(1)} ${unit}`,
+      distanceFormatted: `${formatDistanceNumber(weekVol)} ${unitLabel}`,
       status,
       statusLabel: statusLabels[status],
       pctChange: changePct,
@@ -161,9 +192,10 @@ export function calculateWeeklyMileagePlan(
     weekNum++;
   }
 
-  const totalDistance = Math.round(weeks.reduce((sum, w) => sum + w.distance, 0) * 10) / 10;
-  const averageWeeklyVolume = Math.round((totalDistance / weeks.length) * 10) / 10;
+  const totalDistance = Math.round(weeks.reduce((sum, w) => sum + w.distance, 0) * 100) / 100;
+  const averageWeeklyVolume = Math.round((totalDistance / weeks.length) * 100) / 100;
   const maxVolume = Math.max(...weeks.map((w) => w.distance));
+  const weekWord = weeks.length === 1 ? loc.weeklyMileage.labels.week : loc.weeklyMileage.labels.weeks;
 
   return {
     currentDistance,
@@ -174,6 +206,6 @@ export function calculateWeeklyMileagePlan(
     maxVolume,
     averageWeeklyVolume,
     totalDistance,
-    timelineSummary: `${weeks.length} Weeks`,
+    timelineSummary: `${weeks.length} ${weekWord}`,
   };
 }

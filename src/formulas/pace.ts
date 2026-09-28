@@ -41,8 +41,8 @@ export interface PaceSolverParams {
 
 export interface PaceFinishTableTimeItem {
   offsetSecs: number;
-  paceSecs: number;
-  timeSeconds: number;
+  paceSecs: number | null;
+  timeSeconds: number | null;
   timeFormatted: string;
 }
 
@@ -75,7 +75,8 @@ export interface PaceSolverResult {
 export function calculatePace(distance: number, timeSeconds: number): number | null {
   if (
     !Number.isFinite(distance) ||
-    distance <= 0 ||
+    distance < 0.01 ||
+    distance > 10000 ||
     !Number.isFinite(timeSeconds) ||
     timeSeconds <= 0
   ) {
@@ -93,7 +94,8 @@ export function calculatePace(distance: number, timeSeconds: number): number | n
 export function calculateTime(distance: number, paceSeconds: number): number | null {
   if (
     !Number.isFinite(distance) ||
-    distance <= 0 ||
+    distance < 0.01 ||
+    distance > 10000 ||
     !Number.isFinite(paceSeconds) ||
     paceSeconds <= 0
   ) {
@@ -118,7 +120,7 @@ export function calculateDistance(timeSeconds: number, paceSeconds: number): num
   }
   if (paceSeconds < 60 || paceSeconds > 3600) return null;
   const dist = timeSeconds / paceSeconds;
-  return Number.isFinite(dist) && dist > 0 ? dist : null;
+  return Number.isFinite(dist) && dist >= 0.01 && dist <= 10000 ? dist : null;
 }
 
 /**
@@ -185,18 +187,39 @@ export function convertPace(
 
 /**
  * Three-way solver for distance, pace, and time.
- * Expects exactly two defined parameters; solves for the third.
+ * Expects exactly two defined parameters; solves for the genuinely omitted third.
  */
 export function solvePace(params: PaceSolverParams): PaceSolverResult | null {
   const { distance, paceSeconds, timeSeconds, unit = 'km', lang } = params;
 
-  const hasDist = Number.isFinite(distance) && distance! > 0;
-  const hasPace = Number.isFinite(paceSeconds) && paceSeconds! > 0;
-  const hasTime = Number.isFinite(timeSeconds) && timeSeconds! > 0;
+  const isDefined = (v: unknown) => v !== undefined && v !== null;
+  const defCount =
+    (isDefined(distance) ? 1 : 0) +
+    (isDefined(paceSeconds) ? 1 : 0) +
+    (isDefined(timeSeconds) ? 1 : 0);
 
-  const count = (hasDist ? 1 : 0) + (hasPace ? 1 : 0) + (hasTime ? 1 : 0);
-  if (count !== 2) {
+  // Exactly two defined parameters must be provided; third is solved
+  if (defCount !== 2) {
     return null;
+  }
+
+  // Validate defined parameters against physiological and operational domains
+  if (isDefined(distance)) {
+    if (!Number.isFinite(distance) || distance! < 0.01 || distance! > 10000) {
+      return null;
+    }
+  }
+
+  if (isDefined(paceSeconds)) {
+    if (!Number.isFinite(paceSeconds) || paceSeconds! < 60 || paceSeconds! > 3600) {
+      return null;
+    }
+  }
+
+  if (isDefined(timeSeconds)) {
+    if (!Number.isFinite(timeSeconds) || timeSeconds! <= 0) {
+      return null;
+    }
   }
 
   let solvedField: 'distance' | 'pace' | 'time';
@@ -204,17 +227,17 @@ export function solvePace(params: PaceSolverParams): PaceSolverResult | null {
   let finalPace: number;
   let finalTime: number;
 
-  if (!hasDist) {
+  if (!isDefined(distance)) {
     solvedField = 'distance';
     const dist = calculateDistance(timeSeconds!, paceSeconds!);
-    if (dist === null) return null;
+    if (dist === null || dist < 0.01 || dist > 10000) return null;
     finalDist = dist;
     finalPace = paceSeconds!;
     finalTime = timeSeconds!;
-  } else if (!hasPace) {
+  } else if (!isDefined(paceSeconds)) {
     solvedField = 'pace';
     const pace = calculatePace(distance!, timeSeconds!);
-    if (pace === null) return null;
+    if (pace === null || pace < 60 || pace > 3600) return null;
     finalDist = distance!;
     finalPace = pace;
     finalTime = timeSeconds!;
@@ -227,8 +250,11 @@ export function solvePace(params: PaceSolverParams): PaceSolverResult | null {
     finalTime = time;
   }
 
+  if (finalDist < 0.01 || finalDist > 10000) return null;
+
   const isKm = unit === 'km';
-  const paceUnitLabel = isKm ? 'km' : 'mi';
+  const loc = getLocale(lang);
+  const paceUnitLabel = isKm ? loc.pace.units.km : loc.pace.units.mi;
   const distanceFormatted = `${Math.round(finalDist * 100) / 100} ${paceUnitLabel}`;
   const paceFormatted = formatPace(finalPace);
   const timeFormatted = formatTime(finalTime);
@@ -238,7 +264,6 @@ export function solvePace(params: PaceSolverParams): PaceSolverResult | null {
     : (3600 / finalPace) * KM_PER_MILE;
   const speedMph = speedKmh / KM_PER_MILE;
 
-  const loc = getLocale(lang);
   const standardDefs = [
     { key: 'k5', label: loc.pace.distances.k5, km: 5, highlight: false },
     { key: 'k10', label: loc.pace.distances.k10, km: 10, highlight: true },
@@ -251,7 +276,16 @@ export function solvePace(params: PaceSolverParams): PaceSolverResult | null {
   const finishTable: PaceFinishTableItem[] = standardDefs.map((d) => {
     const distInUnit = isKm ? d.km : d.km / KM_PER_MILE;
     const times: PaceFinishTableTimeItem[] = offsets.map((off) => {
-      const paceSecs = Math.max(60, finalPace + off);
+      const paceSecs = finalPace + off;
+      // Do not silently clamp unsupported offsets; represent them explicitly with null and '—'
+      if (paceSecs < 60 || paceSecs > 3600) {
+        return {
+          offsetSecs: off,
+          paceSecs: null,
+          timeSeconds: null,
+          timeFormatted: '—',
+        };
+      }
       const totalSecs = Math.round(paceSecs * distInUnit);
       return {
         offsetSecs: off,

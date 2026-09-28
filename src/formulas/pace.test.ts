@@ -103,4 +103,63 @@ describe('Pace Solver', () => {
     expect(solvePace({ distance: 10, paceSeconds: 300, timeSeconds: 3000 })).toBeNull();
     expect(solvePace({})).toBeNull();
   });
+
+  it('rejects calls where a third input is supplied, even if invalid or zero', () => {
+    // Exactly two defined parameters must be supplied; third must not be silently overwritten
+    expect(solvePace({ distance: 10, paceSeconds: 300, timeSeconds: 0 })).toBeNull();
+    expect(solvePace({ distance: 10, paceSeconds: 300, timeSeconds: -50 })).toBeNull();
+    expect(solvePace({ distance: 10, paceSeconds: 300, timeSeconds: NaN })).toBeNull();
+    // Genuinely omitted third parameter (null or undefined) solves correctly
+    const solved = solvePace({ distance: 10, paceSeconds: 300, timeSeconds: null });
+    expect(solved).not.toBeNull();
+    expect(solved!.timeSeconds).toBe(3000);
+  });
+
+  it('enforces distance bounds [0.01, 10000] on both supplied and calculated distances', () => {
+    expect(calculatePace(0.001, 300)).toBeNull();
+    expect(calculateTime(0.001, 300)).toBeNull();
+    expect(calculateDistance(300, 3600000)).toBeNull(); // dist < 0.01
+
+    expect(solvePace({ distance: 0.001, paceSeconds: 300 })).toBeNull();
+    expect(solvePace({ distance: 10001, paceSeconds: 300 })).toBeNull();
+    // Calculated distance exceeding 10000 is rejected
+    expect(solvePace({ timeSeconds: 36000000, paceSeconds: 3000 })).toBeNull();
+  });
+
+  it('explicitly represents unsupported finish table offsets with null and em-dash without silent clamping', () => {
+    // paceSeconds 60: offsets -10 and -5 would result in 50s and 55s (< 60s minimum)
+    const res = solvePace({ distance: 5, paceSeconds: 60, unit: 'km' });
+    expect(res).not.toBeNull();
+    const k5 = res!.finishTable.find((t) => t.distanceKey === 'k5')!;
+    // Offset -10
+    expect(k5.times[0].offsetSecs).toBe(-10);
+    expect(k5.times[0].paceSecs).toBeNull();
+    expect(k5.times[0].timeSeconds).toBeNull();
+    expect(k5.times[0].timeFormatted).toBe('—');
+    // Offset -5
+    expect(k5.times[1].offsetSecs).toBe(-5);
+    expect(k5.times[1].paceSecs).toBeNull();
+    expect(k5.times[1].timeSeconds).toBeNull();
+    expect(k5.times[1].timeFormatted).toBe('—');
+    // Offset 0 (valid at 60s/km)
+    expect(k5.times[2].offsetSecs).toBe(0);
+    expect(k5.times[2].paceSecs).toBe(60);
+    expect(k5.times[2].timeSeconds).toBe(300);
+    expect(k5.times[2].timeFormatted).toBe('5:00');
+  });
+
+  it('resolves unit strings and distance formatting through the locale dictionary', () => {
+    const resZh = solvePace({ distance: 10, paceSeconds: 300, lang: 'zh' });
+    expect(resZh).not.toBeNull();
+    expect(resZh!.distanceFormatted).toBe('10 公里');
+
+    const resCustom = solvePace({
+      distance: 10,
+      paceSeconds: 300,
+      // @ts-expect-error test deep partial override
+      lang: { pace: { units: { km: 'kilo' } } },
+    });
+    expect(resCustom).not.toBeNull();
+    expect(resCustom!.distanceFormatted).toBe('10 kilo');
+  });
 });

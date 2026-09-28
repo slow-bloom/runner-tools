@@ -182,6 +182,10 @@ export const zhLocale: RunnerToolsLocale = {
     },
   },
   weeklyMileage: {
+    units: {
+      km: '公里',
+      mi: '英里',
+    },
     status: {
       base: '基准跑量',
       build: '跑量增长',
@@ -189,7 +193,8 @@ export const zhLocale: RunnerToolsLocale = {
       target: '达成目标',
     },
     labels: {
-      week: '周次',
+      week: '周',
+      weeks: '周',
       distance: '周总跑量',
       status: '阶段状态',
       change: '环比增幅',

@@ -327,6 +327,8 @@ if (solved) {
 
 Generates structured, progressive running volume plans based on the classical 10% rule and structured deload recovery cycles.
 
+> **Scientific Basis & Provenance**: The 10% weekly volume progression rule is an empirical training heuristic (Henderson, 1979; Daniels, 2014). Clinical and epidemiological research (Nielsen et al., 2014) indicates that volume progression guidelines do not guarantee individual immunity against running-related injuries (RRI). Structured deload weeks (reducing volume by 20–30% every 3–4 weeks) follow foundational periodization principles (Bompa & Haff, 2009; Gabbett, 2016) to attenuate acute fatigue while consolidating tissue adaptation. This model provides mathematical planning guidance, not a medical or injury-prevention guarantee.
+
 #### Usage
 
 ```typescript
@@ -377,6 +379,9 @@ if (plan) {
 7. **Gellish, R. L., et al.** (2007). "Longitudinal Modeling of the Relationship between Age and Maximal Heart Rate". *Medicine & Science in Sports & Exercise*, 39(5), 822–829.
 8. **World Masters Athletics (WMA)**. (2020). *Age-Grading Tables for Road Running Events*.
 9. **Friel, J.** (2009). *The Triathlete's Training Bible* (3rd ed.). VeloPress.
+10. **Nielsen, R. O., et al.** (2014). "The 10% increase rule for preventing running-related injuries: a secondary analysis of a 1-year PRISMO cohort study". *Journal of Orthopaedic & Sports Physical Therapy*, 44(10), 739–747.
+11. **Gabbett, T. J.** (2016). "The training—injury prevention paradox: should athletes be training smarter and harder?". *British Journal of Sports Medicine*, 50(5), 273–280.
+12. **Bompa, T. O., & Haff, G. G.** (2009). *Periodization: Theory and Methodology of Training* (5th ed.). Human Kinetics.
 
 ---
 

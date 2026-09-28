@@ -142,6 +142,10 @@ export interface RunnerToolsLocale {
     };
   };
   weeklyMileage: {
+    units: {
+      km: string;
+      mi: string;
+    };
     status: {
       base: string;
       build: string;
@@ -150,6 +154,7 @@ export interface RunnerToolsLocale {
     };
     labels: {
       week: string;
+      weeks: string;
       distance: string;
       status: string;
       change: string;
@@ -339,6 +344,10 @@ export const enLocale: RunnerToolsLocale = {
     },
   },
   weeklyMileage: {
+    units: {
+      km: 'km',
+      mi: 'mi',
+    },
     status: {
       base: 'Baseline',
       build: 'Build',
@@ -347,6 +356,7 @@ export const enLocale: RunnerToolsLocale = {
     },
     labels: {
       week: 'Week',
+      weeks: 'Weeks',
       distance: 'Weekly Distance',
       status: 'Status',
       change: 'Change',
