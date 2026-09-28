@@ -43,4 +43,17 @@ export const zhLocale: RunnerToolsLocale = {
       paceMi: '/英里',
     },
   },
+  racePredictor: {
+    distances: {
+      k5: '5 公里 (5K)',
+      k10: '10 公里 (10K)',
+      halfMarathon: '半程马拉松 (21.0975 公里)',
+      marathon: '全程马拉松 (42.195 公里)',
+    },
+    exponents: {
+      elite: '1.06 - Riegel 经典标准（有氧底子扎实 / 严肃跑者）',
+      recreational: '1.08 - 大众跑者推荐（日常周跑量适中）',
+      beginner: '1.10 - 跑量较少 / 刚进阶长距离跑者',
+    },
+  },
 };

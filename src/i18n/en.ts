@@ -27,6 +27,19 @@ export interface RunnerToolsLocale {
       paceMi: string;
     };
   };
+  racePredictor: {
+    distances: {
+      k5: string;
+      k10: string;
+      halfMarathon: string;
+      marathon: string;
+    };
+    exponents: {
+      elite: string;
+      recreational: string;
+      beginner: string;
+    };
+  };
 }
 
 export const enLocale: RunnerToolsLocale = {
@@ -70,6 +83,19 @@ export const enLocale: RunnerToolsLocale = {
       mi: 'mi',
       paceKm: '/km',
       paceMi: '/mi',
+    },
+  },
+  racePredictor: {
+    distances: {
+      k5: '5K',
+      k10: '10K',
+      halfMarathon: 'Half Marathon',
+      marathon: 'Marathon',
+    },
+    exponents: {
+      elite: '1.06 - Riegel Standard (High aerobic endurance / Elite)',
+      recreational: '1.08 - Recreational Runner (Moderate mileage)',
+      beginner: '1.10 - Beginner / Low Mileage (<30 km/week)',
     },
   },
 };
