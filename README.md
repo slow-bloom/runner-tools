@@ -29,18 +29,18 @@ Experience these algorithms live in action on the web:
 
 ```bash
 # npm
-npm install @apexrun/runner-tools
+npm install @slowbloom/runner-tools
 
 # pnpm
-pnpm add @apexrun/runner-tools
+pnpm add @slowbloom/runner-tools
 
 # yarn
-yarn add @apexrun/runner-tools
+yarn add @slowbloom/runner-tools
 ```
 
 Or directly via CDN in HTML:
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@apexrun/runner-tools/dist/runner-tools.global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@slowbloom/runner-tools/dist/runner-tools.global.js"></script>
 <script>
   const result = RunnerTools.calculateVDOT({ distanceMeters: 5000, timeSeconds: 1200 });
   console.log('VDOT:', result.vdotFormatted);
@@ -76,7 +76,7 @@ Implements the classic **Jack Daniels' Running Formula** via the Daniels-Gilbert
 #### Usage
 
 ```typescript
-import { calculateVDOT } from '@apexrun/runner-tools';
+import { calculateVDOT } from '@slowbloom/runner-tools';
 
 // Calculate from a 5K race in 20 minutes (1200 seconds)
 const res = calculateVDOT({
@@ -116,4 +116,4 @@ Contributions, bug reports, and discussions regarding endurance sports algorithm
 
 ## License
 
-[MIT License](./LICENSE) © 2026 Apex Run
+[MIT License](./LICENSE) © 2026 Slowbloom Studio

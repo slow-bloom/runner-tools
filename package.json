@@ -1,5 +1,5 @@
 {
-  "name": "@apexrun/runner-tools",
+  "name": "@slowbloom/runner-tools",
   "version": "0.1.0",
   "description": "Pure client-side exercise science algorithms, running pace formulas, and track utilities.",
   "type": "module",
@@ -32,7 +32,7 @@
     "garmin",
     "apple-watch"
   ],
-  "author": "Apex Run",
+  "author": "Slowbloom Studio",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.0.0",
