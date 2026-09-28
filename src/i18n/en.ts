@@ -4,6 +4,17 @@ export interface VDOTZoneI18n {
   description: string;
 }
 
+export interface HeartRateZoneI18n {
+  name: string;
+  category: string;
+  description: string;
+}
+
+export interface HeartRateMethodInfoI18n {
+  title: string;
+  description: string;
+}
+
 export interface RunnerToolsLocale {
   locale: string;
   vdot: {
@@ -38,6 +49,25 @@ export interface RunnerToolsLocale {
       elite: string;
       recreational: string;
       beginner: string;
+    };
+  };
+  heartRateZones: {
+    zones: {
+      z1: HeartRateZoneI18n;
+      z2: HeartRateZoneI18n;
+      z3: HeartRateZoneI18n;
+      z4: HeartRateZoneI18n;
+      z5: HeartRateZoneI18n;
+    };
+    basis: {
+      maxhr: string;
+      karvonen: string;
+      lthr: string;
+    };
+    methods: {
+      maxhr: HeartRateMethodInfoI18n;
+      karvonen: HeartRateMethodInfoI18n;
+      lthr: HeartRateMethodInfoI18n;
     };
   };
 }
@@ -96,6 +126,54 @@ export const enLocale: RunnerToolsLocale = {
       elite: '1.06 - Riegel Standard (High aerobic endurance / Elite)',
       recreational: '1.08 - Recreational Runner (Moderate mileage)',
       beginner: '1.10 - Beginner / Low Mileage (<30 km/week)',
+    },
+  },
+  heartRateZones: {
+    zones: {
+      z1: {
+        name: 'Zone 1',
+        category: 'Recovery',
+        description: 'Warms up and aids recovery.',
+      },
+      z2: {
+        name: 'Zone 2',
+        category: 'Easy / Aerobic',
+        description: 'Improves basic endurance and burns fat.',
+      },
+      z3: {
+        name: 'Zone 3',
+        category: 'Tempo',
+        description: 'Improves aerobic fitness and blood circulation.',
+      },
+      z4: {
+        name: 'Zone 4',
+        category: 'Threshold',
+        description: 'Increases maximum performance capacity.',
+      },
+      z5: {
+        name: 'Zone 5',
+        category: 'Maximum',
+        description: 'Develops maximum performance and speed.',
+      },
+    },
+    basis: {
+      maxhr: 'of Max HR',
+      karvonen: 'of HRR',
+      lthr: 'of LTHR',
+    },
+    methods: {
+      maxhr: {
+        title: 'Max HR Inputs',
+        description: 'Enter your details to calculate zones based on Max HR percentages.',
+      },
+      karvonen: {
+        title: 'Karvonen Inputs',
+        description: 'Enter Max HR and Resting HR to compute Heart Rate Reserve (HRR) zones.',
+      },
+      lthr: {
+        title: 'LTHR Inputs',
+        description: 'Enter your Lactate Threshold Heart Rate (LTHR) to calculate Joe Friel running zones.',
+      },
     },
   },
 };

@@ -56,4 +56,52 @@ export const zhLocale: RunnerToolsLocale = {
       beginner: '1.10 - 跑量较少 / 刚进阶长距离跑者',
     },
   },
+  heartRateZones: {
+    zones: {
+      z1: {
+        name: 'Zone 1',
+        category: '恢复排酸',
+        description: '用于运动前热身激活与高强度后排酸恢复。',
+      },
+      z2: {
+        name: 'Zone 2',
+        category: '有氧基础耐力 (轻松跑)',
+        description: '刺激线粒体与毛细血管生长，高效燃烧脂肪。',
+      },
+      z3: {
+        name: 'Zone 3',
+        category: '节奏/马拉松区间',
+        description: '强化心血管泵血效率与马拉松专项巡航能力。',
+      },
+      z4: {
+        name: 'Zone 4',
+        category: '乳酸阈值',
+        description: '提高身体在极限配速下的抗乳酸疲劳能力。',
+      },
+      z5: {
+        name: 'Zone 5',
+        category: '无氧极限',
+        description: '最大限度刺激最大摄氧量与神经肌肉爆发力。',
+      },
+    },
+    basis: {
+      maxhr: '最大心率比例',
+      karvonen: 'HRR 比例',
+      lthr: 'LTHR 比例',
+    },
+    methods: {
+      maxhr: {
+        title: '最大心率法参数',
+        description: '输入年龄估算或直接输入已知最大心率，按百分比划分区间。',
+      },
+      karvonen: {
+        title: '卡沃宁储备心率法参数',
+        description: '输入最大心率与静息心率，结合生理缓冲空间划分区间（推荐）。',
+      },
+      lthr: {
+        title: '乳酸阈值心率法参数',
+        description: '输入 30 分钟计时测得的乳酸阈值心率 (LTHR)，划分专业耐力区间。',
+      },
+    },
+  },
 };
