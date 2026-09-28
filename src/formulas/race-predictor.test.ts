@@ -5,18 +5,18 @@ describe('Peter Riegel Race Predictor Formula', () => {
   it('should accurately calculate Riegel race prediction for 10K to Marathon', () => {
     // 10K in 45:00 (2700s) -> Marathon (42.195 km) at exponent 1.06
     const predictedMarathon = predictRaceTime(10000, 2700, 42195, 1.06);
-    // T2 = 2700 * (42.195 / 10)^1.06 = 2700 * 4.6067... = ~12438s (~3h 27m 18s)
-    expect(predictedMarathon).toBeGreaterThan(12400);
-    expect(predictedMarathon).toBeLessThan(12500);
+    expect(predictedMarathon).not.toBeNull();
+    expect(predictedMarathon!).toBeGreaterThan(12400);
+    expect(predictedMarathon!).toBeLessThan(12500);
 
     // Same distance should return identical time
     expect(predictRaceTime(10000, 2700, 10000, 1.06)).toBeCloseTo(2700, 4);
   });
 
   it('should reflect higher fatigue and slower times with larger exponents', () => {
-    const elite = predictRaceTime(10000, 2700, 42195, 1.06);
-    const recreational = predictRaceTime(10000, 2700, 42195, 1.08);
-    const beginner = predictRaceTime(10000, 2700, 42195, 1.10);
+    const elite = predictRaceTime(10000, 2700, 42195, 1.06)!;
+    const recreational = predictRaceTime(10000, 2700, 42195, 1.08)!;
+    const beginner = predictRaceTime(10000, 2700, 42195, 1.10)!;
 
     expect(recreational).toBeGreaterThan(elite);
     expect(beginner).toBeGreaterThan(recreational);
@@ -56,9 +56,43 @@ describe('Peter Riegel Race Predictor Formula', () => {
     expect(half.distanceFormatted).toContain('公里');
   });
 
-  it('should handle invalid baseline inputs gracefully', () => {
+  it('should return null for invalid, zero, or NaN baseline inputs', () => {
     expect(calculateRacePredictions({ baseDistanceMeters: 0, baseTimeSeconds: 2700 })).toBeNull();
+    expect(calculateRacePredictions({ baseDistanceMeters: NaN, baseTimeSeconds: 2700 })).toBeNull();
     expect(calculateRacePredictions({ baseDistanceMeters: 10000, baseTimeSeconds: 0 })).toBeNull();
-    expect(predictRaceTime(0, 2700, 42195)).toBe(0);
+    expect(calculateRacePredictions({ baseDistanceMeters: 10000, baseTimeSeconds: NaN })).toBeNull();
+    expect(calculateRacePredictions({ baseDistanceMeters: 10000, baseTimeSeconds: 2700, exponent: NaN })).toBeNull();
+    expect(calculateRacePredictions({ baseDistanceMeters: 10000, baseTimeSeconds: 2700, exponent: -1 })).toBeNull();
+    expect(predictRaceTime(0, 2700, 42195)).toBeNull();
+    expect(predictRaceTime(NaN, 2700, 42195)).toBeNull();
+    expect(predictRaceTime(10000, 2700, NaN)).toBeNull();
+  });
+
+  it('should filter out invalid target distances and not return NaN or 0:00 rows', () => {
+    const res = calculateRacePredictions({
+      baseDistanceMeters: 10000,
+      baseTimeSeconds: 2700,
+      targetDistances: [
+        { meters: 5000, label: 'Valid 5K' },
+        { meters: 0, label: 'Zero dist' },
+        { meters: NaN, label: 'NaN dist' },
+        { meters: -100, label: 'Negative dist' },
+      ],
+    });
+
+    expect(res).not.toBeNull();
+    // Only the single valid target should be retained
+    expect(res!.predictions.length).toBe(1);
+    expect(res!.predictions[0].distanceLabel).toBe('Valid 5K');
+    expect(res!.predictions[0].timeFormatted).not.toBe('0:00');
+    expect(res!.predictions[0].timeFormatted).not.toContain('NaN');
+
+    // If all targets are invalid, returns null
+    const allInvalid = calculateRacePredictions({
+      baseDistanceMeters: 10000,
+      baseTimeSeconds: 2700,
+      targetDistances: [{ meters: NaN }, { meters: 0 }],
+    });
+    expect(allInvalid).toBeNull();
   });
 });

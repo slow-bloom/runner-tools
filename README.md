@@ -11,17 +11,17 @@
 ## Live Demo
 
 Experience these algorithms live in action on the web:
-- **[VDOT & Training Pace Calculator (Live Web Demo)](https://apexrun.app/tools/vdot-calculator/)**
-- **[Race Predictor (Live Web Demo)](https://apexrun.app/tools/race-predictor/)**
+- **[VDOT & Training Pace Calculator (Live Web Demo)](https://apexrun.fit/tools/vdot-calculator/)**
+- **[Race Predictor (Live Web Demo)](https://apexrun.fit/tools/race-predictor/)**
 
 ---
 
 ## Highlights
 
 - **Pure & Zero Dependencies**: 100% pure TypeScript formulas with zero runtime dependencies. Runs anywhere: Node.js, browsers, Bun, Deno, Cloudflare Workers.
-- **Scientifically Grounded**: Implements Daniels & Gilbert's oxygen consumption models, Riegel's endurance power laws, and Karvonen heart rate reserve frameworks.
-- **Built-in i18n**: First-class multilingual support with English as default, easily extendable to new languages.
-- **100% Tested**: Rigorously benchmarked against standard racing and physiology datasets.
+- **Scientifically Grounded**: Implements Daniels & Gilbert's oxygen consumption models and Riegel's endurance power laws.
+- **Built-in i18n & Extensible**: Multilingual support with hierarchical locale fallback (exact tag -> base language -> English default) and custom dictionary registration.
+- **Unit Tested**: Rigorously benchmarked against standard racing records and numerical boundary conditions.
 
 ---
 
@@ -29,18 +29,18 @@ Experience these algorithms live in action on the web:
 
 ```bash
 # npm
-npm install @slowbloom/runner-tools
+npm install @slow-bloom/runner-tools
 
 # pnpm
-pnpm add @slowbloom/runner-tools
+pnpm add @slow-bloom/runner-tools
 
 # yarn
-yarn add @slowbloom/runner-tools
+yarn add @slow-bloom/runner-tools
 ```
 
 Or directly via CDN in HTML:
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@slowbloom/runner-tools/dist/runner-tools.global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@slow-bloom/runner-tools/dist/runner-tools.global.js"></script>
 <script>
   const result = RunnerTools.calculateVDOT({ distanceMeters: 5000, timeSeconds: 1200 });
   console.log('VDOT:', result.vdotFormatted);
@@ -76,9 +76,12 @@ Implements the classic **Jack Daniels' Running Formula** via the Daniels-Gilbert
 #### Usage
 
 ```typescript
-import { calculateVDOT } from '@slowbloom/runner-tools';
+import { calculateVDOT, calculateVDOTScore } from '@slow-bloom/runner-tools';
 
-// Calculate from a 5K race in 20 minutes (1200 seconds)
+// 1. Pure numeric score
+const vdot = calculateVDOTScore(5000, 1200); // ~49.8
+
+// 2. Full calculation with training zones
 const res = calculateVDOT({
   distanceMeters: 5000,
   timeSeconds: 1200,
@@ -107,9 +110,12 @@ Where $b$ represents the endurance fatigue exponent:
 #### Usage
 
 ```typescript
-import { calculateRacePredictions } from '@slowbloom/runner-tools';
+import { calculateRacePredictions, predictRaceTime } from '@slow-bloom/runner-tools';
 
-// Predict marathon performance from a 10K in 45 minutes
+// 1. Pure numeric prediction (seconds)
+const marathonSecs = predictRaceTime(10000, 2700, 42195, 1.06);
+
+// 2. Multi-distance prediction table
 const result = calculateRacePredictions({
   baseDistanceMeters: 10000,
   baseTimeSeconds: 2700,

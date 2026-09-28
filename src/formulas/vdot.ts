@@ -1,7 +1,10 @@
 import { formatPace, formatTime } from '../utils/format.js';
-import { getLocale, type RunnerToolsLocale } from '../i18n/index.js';
+import { getLocale, type LocaleInput } from '../i18n/index.js';
+import { type PaceUnit, STANDARD_RACE_DISTANCES, type StandardRaceDistance } from '../types/index.js';
 
-export type PaceUnit = 'km' | 'mi';
+export type { PaceUnit, StandardRaceDistance };
+export { STANDARD_RACE_DISTANCES };
+
 export type VDOTZoneKey = 'E' | 'M' | 'T' | 'I' | 'R';
 
 export interface VDOTZoneConfig {
@@ -18,6 +21,30 @@ export const VDOT_ZONE_CONFIGS: Record<VDOTZoneKey, VDOTZoneConfig> = {
   I: { key: 'I', lowPct: 0.9571, highPct: 1.0051, color: '#ff9500' },
   R: { key: 'R', lowPct: 1.0145, highPct: 1.0432, color: '#ff3b30' },
 };
+
+// ── 1. Pure Numerical Calculation Types ──
+
+export interface RawPaceZoneItem {
+  key: VDOTZoneKey;
+  lowPct: number;
+  highPct: number;
+  vo2Low: number;
+  vo2High: number;
+  velocityLowMpm: number;
+  velocityHighMpm: number;
+  fastPaceSecs: number; // Low seconds per unit (faster pace)
+  slowPaceSecs: number; // High seconds per unit (slower pace)
+  unit: PaceUnit;
+}
+
+export interface RawEquivalentPerformance {
+  distanceMeters: number;
+  predictedSeconds: number;
+  targetPaceSecs: number;
+  unit: PaceUnit;
+}
+
+// ── 2. Presentation Types ──
 
 export interface PaceZoneResult {
   key: VDOTZoneKey;
@@ -52,11 +79,14 @@ export interface VDOTCalculationResult {
   equivalentPerformances: EquivalentPerformance[];
 }
 
+// ── 3. Pure Mathematical Functions ──
+
 /**
  * Daniels-Gilbert oxygen consumption equation
  * VO2 cost as a function of velocity (meters/minute)
  */
 export function calculateVO2(velocityMetersPerMin: number): number {
+  if (!Number.isFinite(velocityMetersPerMin) || velocityMetersPerMin <= 0) return 0;
   const v = velocityMetersPerMin;
   return -4.60 + 0.182258 * v + 0.000104 * v * v;
 }
@@ -66,6 +96,7 @@ export function calculateVO2(velocityMetersPerMin: number): number {
  * Returns the fraction of VO2 max sustainable for a given duration (in minutes)
  */
 export function calculateDropDeadFraction(timeMinutes: number): number {
+  if (!Number.isFinite(timeMinutes) || timeMinutes <= 0) return 0;
   const t = timeMinutes;
   return 0.8 + 0.1894393 * Math.exp(-0.012778 * t) + 0.2989558 * Math.exp(-0.1932605 * t);
 }
@@ -75,6 +106,7 @@ export function calculateDropDeadFraction(timeMinutes: number): number {
  * Solves the quadratic equation: 0.000104*v^2 + 0.182258*v - (4.60 + vo2) = 0
  */
 export function solveVelocityForVO2(vo2: number): number {
+  if (!Number.isFinite(vo2) || vo2 <= 0) return 0;
   const a = 0.000104;
   const b = 0.182258;
   const c = -(4.60 + vo2);
@@ -86,8 +118,10 @@ export function solveVelocityForVO2(vo2: number): number {
 /**
  * Solve time (in seconds) for a given race distance and VDOT using bisection numerical method
  */
-export function solveTimeForDistance(distanceMeters: number, vdot: number): number {
-  if (distanceMeters <= 0 || vdot <= 0) return 0;
+export function solveTimeForDistance(distanceMeters: number, vdot: number): number | null {
+  if (!Number.isFinite(distanceMeters) || distanceMeters <= 0 || !Number.isFinite(vdot) || vdot <= 0) {
+    return null;
+  }
   let low = 1.0;     // 1 min
   let high = 1440.0; // 24 hours
   let t = 720.0;
@@ -97,6 +131,7 @@ export function solveTimeForDistance(distanceMeters: number, vdot: number): numb
     const v = distanceMeters / t;
     const vo2 = calculateVO2(v);
     const p = calculateDropDeadFraction(t);
+    if (p <= 0) return null;
     const diff = vo2 / p - vdot;
     if (diff > 0) {
       low = t;
@@ -107,77 +142,136 @@ export function solveTimeForDistance(distanceMeters: number, vdot: number): numb
   return t * 60;
 }
 
-export interface CalculateVDOTOptions {
-  distanceMeters: number;
-  timeSeconds: number;
-  unit?: PaceUnit;
-  lang?: string;
-}
-
 /**
- * Standard distances for equivalent race predictions
+ * Compute raw VDOT numerical score without presentation wrapping
  */
-export const STANDARD_RACE_DISTANCES = [
-  { key: 'k5' as const, meters: 5000 },
-  { key: 'k10' as const, meters: 10000 },
-  { key: 'halfMarathon' as const, meters: 21097.5 },
-  { key: 'marathon' as const, meters: 42195 },
-];
-
-/**
- * Calculate VDOT score, training pace zones (E, M, T, I, R) and equivalent race performances.
- */
-export function calculateVDOT(options: CalculateVDOTOptions): VDOTCalculationResult | null {
-  const { distanceMeters, timeSeconds, unit = 'km', lang = 'en' } = options;
-
-  if (distanceMeters <= 0 || timeSeconds <= 0) {
-    return null;
-  }
+export function calculateVDOTScore(distanceMeters: number, timeSeconds: number): number | null {
+  if (!Number.isFinite(distanceMeters) || distanceMeters <= 0) return null;
+  if (!Number.isFinite(timeSeconds) || timeSeconds <= 0) return null;
 
   const timeMinutes = timeSeconds / 60;
   const velocityMetersPerMin = distanceMeters / timeMinutes;
   const vo2 = calculateVO2(velocityMetersPerMin);
   const fraction = calculateDropDeadFraction(timeMinutes);
 
+  if (fraction <= 0) return null;
   const vdot = vo2 / fraction;
-  if (!Number.isFinite(vdot) || vdot <= 0) {
-    return null;
-  }
 
-  const locale = getLocale(lang);
+  return Number.isFinite(vdot) && vdot > 0 ? vdot : null;
+}
+
+/**
+ * Compute pure numeric pace boundaries for each zone (in seconds per unit)
+ */
+export function calculateVDOTPacesRaw(vdot: number, unit: PaceUnit = 'km'): Record<VDOTZoneKey, RawPaceZoneItem> | null {
+  if (!Number.isFinite(vdot) || vdot <= 0) return null;
+
   const isKm = unit === 'km';
   const unitDistance = isKm ? 1000 : 1609.344;
+  const zoneKeys: VDOTZoneKey[] = ['E', 'M', 'T', 'I', 'R'];
+  const result: Record<VDOTZoneKey, RawPaceZoneItem> = {} as any;
 
+  for (const key of zoneKeys) {
+    const config = VDOT_ZONE_CONFIGS[key];
+    const vo2Low = config.lowPct * vdot;
+    const vLow = solveVelocityForVO2(vo2Low);
+    const slowPaceSecs = vLow > 0 ? (unitDistance / vLow) * 60 : 0;
+
+    const vo2High = config.highPct * vdot;
+    const vHigh = solveVelocityForVO2(vo2High);
+    const fastPaceSecs = vHigh > 0 ? (unitDistance / vHigh) * 60 : 0;
+
+    result[key] = {
+      key,
+      lowPct: config.lowPct,
+      highPct: config.highPct,
+      vo2Low,
+      vo2High,
+      velocityLowMpm: vLow,
+      velocityHighMpm: vHigh,
+      fastPaceSecs,
+      slowPaceSecs,
+      unit,
+    };
+  }
+
+  return result;
+}
+
+/**
+ * Compute pure numeric equivalent race times
+ */
+export function calculateEquivalentTimesRaw(
+  vdot: number,
+  distances: readonly number[] = [5000, 10000, 21097.5, 42195],
+  unit: PaceUnit = 'km'
+): RawEquivalentPerformance[] | null {
+  if (!Number.isFinite(vdot) || vdot <= 0) return null;
+
+  const unitDistance = unit === 'km' ? 1000 : 1609.344;
+  const results: RawEquivalentPerformance[] = [];
+
+  for (const dist of distances) {
+    if (!Number.isFinite(dist) || dist <= 0) continue;
+    const predictedSeconds = solveTimeForDistance(dist, vdot);
+    if (predictedSeconds === null) continue;
+    const targetPaceSecs = predictedSeconds / (dist / unitDistance);
+
+    results.push({
+      distanceMeters: dist,
+      predictedSeconds,
+      targetPaceSecs,
+      unit,
+    });
+  }
+
+  return results;
+}
+
+// ── 4. Presentation & Integration Wrapper ──
+
+export interface CalculateVDOTOptions {
+  distanceMeters: number;
+  timeSeconds: number;
+  unit?: PaceUnit;
+  lang?: LocaleInput;
+}
+
+/**
+ * Calculate VDOT score, training pace zones (E, M, T, I, R) and equivalent race performances.
+ * Formatted with localization, color styling, and readable clock strings.
+ */
+export function calculateVDOT(options: CalculateVDOTOptions): VDOTCalculationResult | null {
+  const { distanceMeters, timeSeconds, unit = 'km', lang } = options;
+
+  const vdot = calculateVDOTScore(distanceMeters, timeSeconds);
+  if (vdot === null) return null;
+
+  const rawPaces = calculateVDOTPacesRaw(vdot, unit);
+  if (!rawPaces) return null;
+
+  const locale = getLocale(lang);
   const zoneKeys: VDOTZoneKey[] = ['E', 'M', 'T', 'I', 'R'];
   const zones: Record<VDOTZoneKey, PaceZoneResult> = {} as any;
   const zonesList: PaceZoneResult[] = [];
 
   for (const key of zoneKeys) {
+    const raw = rawPaces[key];
     const config = VDOT_ZONE_CONFIGS[key];
     const textInfo = locale.vdot.zones[key];
 
-    // High velocity = faster pace = lower seconds per unit
-    const vo2Low = config.lowPct * vdot;
-    const vLow = solveVelocityForVO2(vo2Low);
-    const paceSlowSecs = (unitDistance / vLow) * 60;
-
-    const vo2High = config.highPct * vdot;
-    const vHigh = solveVelocityForVO2(vo2High);
-    const paceFastSecs = (unitDistance / vHigh) * 60;
-
-    // By running convention, faster pace is listed first or second, standard format: Fast - Slow
     const item: PaceZoneResult = {
       key,
-      name: textInfo.name,
-      shortName: textInfo.shortName,
-      description: textInfo.description,
+      name: textInfo?.name || config.key,
+      shortName: textInfo?.shortName || config.key,
+      description: textInfo?.description || '',
       color: config.color,
-      lowPct: config.lowPct,
-      highPct: config.highPct,
-      lowPaceSecs: paceFastSecs,
-      highPaceSecs: paceSlowSecs,
-      lowPaceFormatted: formatPace(paceFastSecs),
-      highPaceFormatted: formatPace(paceSlowSecs),
+      lowPct: raw.lowPct,
+      highPct: raw.highPct,
+      lowPaceSecs: raw.fastPaceSecs,
+      highPaceSecs: raw.slowPaceSecs,
+      lowPaceFormatted: formatPace(raw.fastPaceSecs),
+      highPaceFormatted: formatPace(raw.slowPaceSecs),
       unit,
     };
 
@@ -185,14 +279,14 @@ export function calculateVDOT(options: CalculateVDOTOptions): VDOTCalculationRes
     zonesList.push(item);
   }
 
-  // Equivalent performances
   const equivalentPerformances: EquivalentPerformance[] = STANDARD_RACE_DISTANCES.map((d) => {
-    const predictedSeconds = solveTimeForDistance(d.meters, vdot);
-    const targetPaceSecs = predictedSeconds / (d.meters / unitDistance);
+    const predictedSeconds = solveTimeForDistance(d.meters, vdot) ?? 0;
+    const unitDistance = unit === 'km' ? 1000 : 1609.344;
+    const targetPaceSecs = predictedSeconds > 0 ? predictedSeconds / (d.meters / unitDistance) : 0;
 
     return {
       distanceMeters: d.meters,
-      distanceLabel: locale.vdot.standardDistances[d.key],
+      distanceLabel: locale.vdot.standardDistances[d.key] || `${d.meters / 1000} km`,
       predictedSeconds,
       timeFormatted: formatTime(predictedSeconds),
       targetPaceSecs,

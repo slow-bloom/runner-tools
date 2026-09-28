@@ -1,20 +1,23 @@
 import { formatPace, formatTime } from '../utils/format.js';
-import { getLocale } from '../i18n/index.js';
-import type { PaceUnit } from './vdot.js';
+import { getLocale, type LocaleInput } from '../i18n/index.js';
+import {
+  type PaceUnit,
+  STANDARD_RACE_DISTANCES,
+  type StandardRaceDistanceKey,
+} from '../types/index.js';
 
 export interface RacePredictionTarget {
-  key: 'k5' | 'k10' | 'halfMarathon' | 'marathon';
+  key?: StandardRaceDistanceKey | string;
   label?: string;
   meters: number;
   highlight?: boolean;
 }
 
-export const DEFAULT_PREDICTION_DISTANCES: RacePredictionTarget[] = [
-  { key: 'k5', meters: 5000, highlight: false },
-  { key: 'k10', meters: 10000, highlight: true },
-  { key: 'halfMarathon', meters: 21097.5, highlight: true },
-  { key: 'marathon', meters: 42195, highlight: true },
-];
+export const DEFAULT_PREDICTION_TARGETS: readonly RacePredictionTarget[] = STANDARD_RACE_DISTANCES.map((d) => ({
+  key: d.key,
+  meters: d.meters,
+  highlight: d.highlight,
+}));
 
 export interface PredictedPerformance {
   key?: string;
@@ -25,7 +28,7 @@ export interface PredictedPerformance {
   timeFormatted: string;
   targetPaceSecs: number;
   paceFormatted: string;
-  paceDecayPercent: number; // e.g. +5.2% slower compared to baseline pace
+  paceDecayPercent: number;
   unit: PaceUnit;
   highlight: boolean;
 }
@@ -43,34 +46,47 @@ export interface RacePredictionsResult {
  * Predict race finish time using Peter Riegel's power-law formula:
  * T2 = T1 * (D2 / D1) ^ b
  * 
- * @param baseDistanceMeters Baseline race distance (meters)
- * @param baseTimeSeconds Baseline race time (seconds)
- * @param targetDistanceMeters Target race distance (meters)
- * @param exponent Fatigue exponent (default 1.06, common range 1.05 - 1.12)
+ * Returns null if any input is invalid, NaN, or out of reasonable physiological range.
  */
 export function predictRaceTime(
   baseDistanceMeters: number,
   baseTimeSeconds: number,
   targetDistanceMeters: number,
   exponent: number = 1.06
-): number {
-  if (baseDistanceMeters <= 0 || baseTimeSeconds <= 0 || targetDistanceMeters <= 0) {
-    return 0;
+): number | null {
+  if (
+    !Number.isFinite(baseDistanceMeters) ||
+    baseDistanceMeters <= 0 ||
+    !Number.isFinite(baseTimeSeconds) ||
+    baseTimeSeconds <= 0 ||
+    !Number.isFinite(targetDistanceMeters) ||
+    targetDistanceMeters <= 0
+  ) {
+    return null;
   }
-  return baseTimeSeconds * Math.pow(targetDistanceMeters / baseDistanceMeters, exponent);
+
+  // Sanity check on fatigue exponent (usually between 1.00 and 1.30)
+  if (!Number.isFinite(exponent) || exponent <= 0 || exponent > 3.0) {
+    return null;
+  }
+
+  const result = baseTimeSeconds * Math.pow(targetDistanceMeters / baseDistanceMeters, exponent);
+  return Number.isFinite(result) && result > 0 ? result : null;
 }
 
 export interface CalculateRacePredictionsOptions {
   baseDistanceMeters: number;
   baseTimeSeconds: number;
   exponent?: number;
-  targetDistances?: RacePredictionTarget[];
+  targetDistances?: readonly RacePredictionTarget[];
   unit?: PaceUnit;
-  lang?: string;
+  lang?: LocaleInput;
 }
 
 /**
- * Calculate multi-distance predicted performances and pace targets using Riegel's formula
+ * Calculate multi-distance predicted performances and pace targets with strict input validation.
+ * Invalid targets (NaN, 0, negative meters) are automatically filtered out.
+ * Returns null if baseline performance is invalid or no valid targets exist.
  */
 export function calculateRacePredictions(
   options: CalculateRacePredictionsOptions
@@ -79,12 +95,29 @@ export function calculateRacePredictions(
     baseDistanceMeters,
     baseTimeSeconds,
     exponent = 1.06,
-    targetDistances = DEFAULT_PREDICTION_DISTANCES,
+    targetDistances = DEFAULT_PREDICTION_TARGETS,
     unit = 'km',
-    lang = 'en',
+    lang,
   } = options;
 
-  if (baseDistanceMeters <= 0 || baseTimeSeconds <= 0) {
+  if (
+    !Number.isFinite(baseDistanceMeters) ||
+    baseDistanceMeters <= 0 ||
+    !Number.isFinite(baseTimeSeconds) ||
+    baseTimeSeconds <= 0 ||
+    !Number.isFinite(exponent) ||
+    exponent <= 0 ||
+    exponent > 3.0
+  ) {
+    return null;
+  }
+
+  // Filter and validate targets: ignore invalid, zero, or NaN target distances
+  const validTargets = targetDistances.filter(
+    (t) => t && Number.isFinite(t.meters) && t.meters > 0
+  );
+
+  if (validTargets.length === 0) {
     return null;
   }
 
@@ -93,8 +126,12 @@ export function calculateRacePredictions(
   const unitDistance = isKm ? 1000 : 1609.344;
   const basePaceSecs = baseTimeSeconds / (baseDistanceMeters / unitDistance);
 
-  const predictions: PredictedPerformance[] = targetDistances.map((target) => {
+  const predictions: PredictedPerformance[] = [];
+
+  for (const target of validTargets) {
     const predictedSeconds = predictRaceTime(baseDistanceMeters, baseTimeSeconds, target.meters, exponent);
+    if (predictedSeconds === null) continue;
+
     const targetPaceSecs = predictedSeconds / (target.meters / unitDistance);
     const paceDecayPercent = ((targetPaceSecs - basePaceSecs) / basePaceSecs) * 100;
 
@@ -103,12 +140,13 @@ export function calculateRacePredictions(
       ? `${distInUnit.toFixed(1)} ${locale.vdot.units.km}`
       : `${distInUnit.toFixed(2)} ${locale.vdot.units.mi}`;
 
+    const standardKey = target.key as StandardRaceDistanceKey;
     const distanceLabel =
       target.label ||
-      locale.racePredictor.distances[target.key] ||
+      (standardKey && locale.racePredictor.distances[standardKey]) ||
       `${(target.meters / 1000).toFixed(1)} km`;
 
-    return {
+    predictions.push({
       key: target.key,
       distanceMeters: target.meters,
       distanceLabel,
@@ -120,8 +158,12 @@ export function calculateRacePredictions(
       paceDecayPercent: Math.round(paceDecayPercent * 10) / 10,
       unit,
       highlight: !!target.highlight,
-    };
-  });
+    });
+  }
+
+  if (predictions.length === 0) {
+    return null;
+  }
 
   return {
     baseDistanceMeters,

@@ -48,18 +48,3 @@ console.log('  - dist/index.js (ESM)');
 console.log('  - dist/index.cjs (CJS)');
 console.log('  - dist/runner-tools.global.js (Browser IIFE, window.RunnerTools)');
 console.log('  - dist/**/*.d.ts (Type definitions)');
-
-// Sync to website static directories
-import { copyFileSync, mkdirSync } from 'fs';
-const sites = ['../website/apexrun', '../website/apexrun-zh'];
-for (const site of sites) {
-  if (existsSync(site)) {
-    const jsDir = `${site}/static/js`;
-    if (!existsSync(jsDir)) {
-      mkdirSync(jsDir, { recursive: true });
-    }
-    copyFileSync('dist/runner-tools.global.js', `${jsDir}/runner-tools.global.js`);
-    console.log(`Synced runner-tools.global.js -> ${jsDir}/runner-tools.global.js`);
-  }
-}
-

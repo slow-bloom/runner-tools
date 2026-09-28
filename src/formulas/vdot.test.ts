@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
   calculateVDOT,
+  calculateVDOTScore,
+  calculateVDOTPacesRaw,
+  calculateEquivalentTimesRaw,
   solveVelocityForVO2,
   calculateVO2,
   solveTimeForDistance,
@@ -24,6 +27,24 @@ describe('VDOT Formula & Pace Calculations', () => {
     expect(rHalf).not.toBeNull();
     expect(rHalf!.vdot).toBeGreaterThan(50.5);
     expect(rHalf!.vdot).toBeLessThan(51.5);
+  });
+
+  it('should compute pure raw numerical paces without presentation strings', () => {
+    const rawScore = calculateVDOTScore(5000, 1200);
+    expect(rawScore).not.toBeNull();
+    expect(rawScore!).toBeCloseTo(49.8, 1);
+
+    const rawPaces = calculateVDOTPacesRaw(rawScore!, 'km');
+    expect(rawPaces).not.toBeNull();
+    // Raw numeric paces in seconds/km
+    expect(rawPaces!.E.fastPaceSecs).toBeGreaterThan(0);
+    expect(rawPaces!.E.slowPaceSecs).toBeGreaterThan(rawPaces!.E.fastPaceSecs);
+    expect((rawPaces!.E as any).name).toBeUndefined(); // Pure math layer without presentation
+
+    const rawEqs = calculateEquivalentTimesRaw(rawScore!, [5000, 10000]);
+    expect(rawEqs).not.toBeNull();
+    expect(rawEqs!.length).toBe(2);
+    expect(rawEqs![0].predictedSeconds).toBeCloseTo(1200, 0);
   });
 
   it('should generate all 5 Daniels training pace zones (E, M, T, I, R)', () => {
@@ -61,15 +82,20 @@ describe('VDOT Formula & Pace Calculations', () => {
     const metric = calculateVDOT({ distanceMeters: 5000, timeSeconds: 1200, unit: 'km' })!;
     const imperial = calculateVDOT({ distanceMeters: 5000, timeSeconds: 1200, unit: 'mi' })!;
 
-    // 1 mile ~ 1.609344 km, so seconds per mile should be ~ 1.609344 * seconds per km
     const ratio = imperial.zones.T.lowPaceSecs / metric.zones.T.lowPaceSecs;
     expect(ratio).toBeCloseTo(1.609344, 2);
   });
 
-  it('should handle zero and negative inputs gracefully by returning null', () => {
+  it('should handle zero, negative, and NaN inputs gracefully by returning null', () => {
     expect(calculateVDOT({ distanceMeters: 0, timeSeconds: 1200 })).toBeNull();
+    expect(calculateVDOT({ distanceMeters: NaN, timeSeconds: 1200 })).toBeNull();
     expect(calculateVDOT({ distanceMeters: 5000, timeSeconds: 0 })).toBeNull();
+    expect(calculateVDOT({ distanceMeters: 5000, timeSeconds: NaN })).toBeNull();
     expect(calculateVDOT({ distanceMeters: -5000, timeSeconds: 1200 })).toBeNull();
+    expect(calculateVDOTScore(0, 1200)).toBeNull();
+    expect(calculateVDOTScore(5000, NaN)).toBeNull();
+    expect(solveTimeForDistance(0, 50)).toBeNull();
+    expect(solveTimeForDistance(5000, NaN)).toBeNull();
   });
 
   it('should invert velocity and VO2 accurately', () => {
@@ -83,7 +109,7 @@ describe('VDOT Formula & Pace Calculations', () => {
 
   it('should solve equivalent race performance times with high consistency', () => {
     const vdot = 50.0;
-    const time5k = solveTimeForDistance(5000, vdot);
+    const time5k = solveTimeForDistance(5000, vdot)!;
     // 5K at VDOT 50 should be around 19:57 (1197 seconds)
     expect(time5k).toBeGreaterThan(1180);
     expect(time5k).toBeLessThan(1210);
