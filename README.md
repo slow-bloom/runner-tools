@@ -15,6 +15,7 @@ Experience these algorithms live in action on the web:
 - **[Race Predictor (Live Web Demo)](https://apexrun.fit/tools/race-predictor/)**
 - **[Heart Rate Zones Calculator (Live Web Demo)](https://apexrun.fit/tools/heart-rate-zones-calculator/)**
 - **[Age-Grading Calculator (Live Web Demo)](https://apexrun.fit/tools/age-grading-calculator/)**
+- **[Running Efficiency Calculator (Live Web Demo)](https://apexrun.fit/tools/running-efficiency-calculator/)**
 
 ---
 
@@ -216,13 +217,64 @@ console.log('Open Equivalent:', result.ageEquivalentTimeFormatted); // e.g. "1:4
 
 ---
 
+### 5. Running Efficiency & Biomechanics (`running-efficiency`)
+
+Evaluates mechanical form economy and cardiovascular aerobic energy delivery across key efficiency metrics:
+
+1. **Vertical Ratio (VR)**:
+   $$\text{Vertical Ratio (\%)} = \left(\frac{\text{Vertical Oscillation (cm)}}{\text{Stride Length (cm)}}\right) \times 100\%$$
+   - Elite: `< 6.0%`
+   - Good / Advanced: `6.0% – 8.0%`
+   - Average: `8.1% – 10.0%`
+   - Needs Improvement: `> 10.0%`
+
+2. **Duty Factor (DF)**: Percentage of total gait cycle spent in ground contact:
+   $$\text{Duty Factor (\%)} = \left(\frac{\text{Ground Contact Time (ms)} \times \text{Cadence (spm)}}{120000}\right) \times 100\%$$
+   - Elite Elastic Recoil: `< 30%`
+   - Advanced Flight Phase: `30% – 39%`
+   - Recreational Level: `40% – 50%`
+
+3. **Aerobic Efficiency Factor (EF)**: Joe Friel's distance-per-heartbeat index:
+   $$\text{EF (m/beat)} = \frac{\text{Speed (m/s)} \times 60}{\text{Heart Rate (bpm)}}$$
+   - Developing: `< 1.10`
+   - Solid Aerobic Base: `1.10 – 1.35`
+   - Advanced Aerobic Engine: `1.36 – 1.60`
+   - Elite Aerobic Capacity: `> 1.60`
+
+#### Usage
+
+```typescript
+import {
+  calculateRunningEfficiency,
+  calculateVerticalRatio,
+  calculateDutyFactor,
+  calculateEfficiencyFactor,
+} from '@slow-bloom/runner-tools';
+
+const result = calculateRunningEfficiency({
+  verticalOscillationCm: 8.2,
+  strideLengthM: 1.15,
+  cadenceSpm: 175,
+  groundContactTimeMs: 235,
+  paceSeconds: 300, // 5:00 min/km
+  paceUnit: 'km',
+  heartRateBpm: 145,
+});
+
+console.log('Vertical Ratio:', result.formEconomy?.verticalRatioFormatted); // "7.1%"
+console.log('Duty Factor:', result.formEconomy?.dutyFactorFormatted); // "34.3%"
+console.log('Efficiency Factor:', result.aerobicEfficiency?.efficiencyFactorFormatted); // "1.38 m/beat"
+```
+
+---
+
 ## Roadmap
 
 - [x] Jack Daniels VDOT & Training Paces Engine
 - [x] Peter Riegel Race Performance Predictor
 - [x] Heart Rate Zones (Max HR, Karvonen HRR, LTHR)
 - [x] Age-Graded Scoring (WMA Tables)
-- [ ] Running Efficiency & Heart Rate Decoupling (EF / Pw:Hr)
+- [x] Running Efficiency & Biomechanical Economy (VR, DF, EF)
 - [ ] Browser-based FIT / GPX / TCX Parser & Converter (Zero Server Uploads)
 - [ ] GPS Drift & Ghost Mileage Analyzer
 
