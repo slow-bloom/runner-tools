@@ -45,9 +45,16 @@ export function parseTCX(xmlText: string, options?: ParseTrackOptions): Activity
 
     for (const lap of lapMatches) {
       const lapXml = lap.innerXml;
-      const distVal = getXmlChildTagValue(lapXml, 'DistanceMeters');
-      const timeVal = getXmlChildTagValue(lapXml, 'TotalTimeSeconds');
-      const cadVal = getXmlChildTagValue(lapXml, 'Cadence');
+      // Strip <Track> blocks to ensure we only read direct lap-level summary attributes,
+      // preventing trackpoint-level child elements (like <Trackpoint><Cadence>) from corrupting lap averages.
+      const lapHeaderXml = lapXml.replace(
+        /<(?:[a-zA-Z0-9_-]+:)?Track\b[\s\S]*?<\/(?:[a-zA-Z0-9_-]+:)?Track>/gi,
+        ''
+      );
+
+      const distVal = getXmlChildTagValue(lapHeaderXml, 'DistanceMeters');
+      const timeVal = getXmlChildTagValue(lapHeaderXml, 'TotalTimeSeconds');
+      const cadVal = getXmlChildTagValue(lapHeaderXml, 'Cadence');
 
       const d = distVal && Number.isFinite(parseFloat(distVal)) ? parseFloat(distVal) : 0;
       const t = timeVal && Number.isFinite(parseFloat(timeVal)) ? parseFloat(timeVal) : 0;
@@ -151,7 +158,7 @@ export function parseTCX(xmlText: string, options?: ParseTrackOptions): Activity
   const summary = calculateActivitySummary(normalizedPoints, lapSummary);
 
   return {
-    name: 'Activity',
+    name: defaultName,
     points: normalizedPoints,
     summary,
   };
@@ -175,8 +182,11 @@ export function serializeToTCX(
   const startTimeIso = safeIsoTimestamp(points[0]?.time);
   const totalTimeSecs = activitySummary.duration || 0;
   const totalDistMeters = activitySummary.distance || 0;
-  // Estimate or clamp calories to valid unsignedShort (0 - 65535)
-  const calories = Math.min(65535, Math.max(0, Math.round(totalDistMeters * 0.06)));
+  // Use caller-provided calories if recorded, otherwise emit schema-compliant default 0 (unknown/unmeasured)
+  const calories =
+    options?.calories !== undefined && Number.isFinite(options.calories)
+      ? Math.min(65535, Math.max(0, Math.round(options.calories)))
+      : 0;
 
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2 http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd">

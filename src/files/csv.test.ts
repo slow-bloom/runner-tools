@@ -58,4 +58,25 @@ describe('CSV Parser & Serializer', () => {
     expect(parsed.points[0].cad).toBe(175);
     expect(parsed.points[0].time?.toISOString()).toBe('2026-03-01T08:00:00.000Z');
   });
+
+  it('returns localized defaultName on successful parse when locale is provided', () => {
+    const csv = serializeToCSV(points);
+    const parsed = parseCSV(csv, { locale: 'zh-CN' });
+    expect(parsed.name).toBe('运动记录');
+    expect(parsed.points).toHaveLength(2);
+  });
+
+  it('preserves quoted fields containing embedded newlines adhering to RFC 4180', () => {
+    const csvWithEmbeddedNewline =
+      'Timestamp,Latitude,Longitude,Elevation(m),Distance(m),HeartRate(bpm),Cadence(spm),Speed(m/s),Power(w),Notes\n' +
+      '"2026-03-01T08:00:00.000Z","39.900000","116.400000","50.00","0.0","140","175","3.20","240","Warmup lap\\r\\ncompleted normally"\n' +
+      '"2026-03-01T08:00:10.000Z","39.900300","116.400300","50.50","35.0","144","178","3.50","250","Fast stride"';
+
+    const parsed = parseCSV(csvWithEmbeddedNewline);
+    // Must produce exactly 2 points, not 3 (which happens when newlines inside quotes are split naively)
+    expect(parsed.points).toHaveLength(2);
+    expect(parsed.points[0].lat).toBeCloseTo(39.9, 4);
+    expect(parsed.points[0].lon).toBeCloseTo(116.4, 4);
+    expect(parsed.points[1].lat).toBeCloseTo(39.9003, 4);
+  });
 });

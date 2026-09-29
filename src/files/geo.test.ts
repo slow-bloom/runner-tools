@@ -66,6 +66,24 @@ describe('Geographic & Track Utilities', () => {
       expect(calculateMovingTime(points)).toBe(0);
     });
 
+    it('preserves null distance provenance when movement data is absent and calculates elapsed moving time', () => {
+      const t0 = new Date('2026-03-01T08:00:00Z');
+      const rawPoints: Trackpoint[] = [
+        { lat: null, lon: null, ele: null, time: t0, hr: 140, cad: null, distance: null },
+        { lat: null, lon: null, ele: null, time: new Date(t0.getTime() + 10000), hr: 145, cad: null, distance: null },
+      ];
+
+      const normalized = normalizeTrackDistances(rawPoints);
+      expect(normalized[0].distance).toBeNull();
+      expect(normalized[1].distance).toBeNull();
+
+      const summary = calculateActivitySummary(normalized);
+      // Spanning 10 seconds with missing movement data must report 10s duration, NOT 0s standstill
+      expect(summary.duration).toBe(10);
+      expect(summary.totalElapsedTime).toBe(10);
+      expect(summary.avgHeartRate).toBe(143);
+    });
+
     it('returns 0 for empty or single point streams', () => {
       expect(calculateMovingTime([])).toBe(0);
       expect(calculateMovingTime([{ lat: 0, lon: 0, ele: 0, time: new Date(), hr: null, cad: null, distance: 0 }])).toBe(0);

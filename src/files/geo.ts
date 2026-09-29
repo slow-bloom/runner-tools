@@ -193,6 +193,20 @@ export function normalizeTrackDistances(
   if (points.length === 0) return [];
 
   const forceGps = options?.forceGps ?? false;
+
+  const hasRecordedDistances = points.some(
+    (p) => p.distance !== null && Number.isFinite(p.distance)
+  );
+  const hasCoordinates = points.some(
+    (p) => p.lat !== null && p.lon !== null && Number.isFinite(p.lat) && Number.isFinite(p.lon)
+  );
+
+  // If trackpoints completely lack recorded distance and GPS coordinates,
+  // preserve missing-distance provenance (keep null) instead of fabricating 0m measurements.
+  if (!forceGps && !hasRecordedDistances && !hasCoordinates) {
+    return points.map((pt) => ({ ...pt }));
+  }
+
   let cumDist = 0;
   let lastRawDist = 0;
   let distanceOffset = 0;
@@ -320,9 +334,18 @@ export function calculateActivitySummary(
     existingSummary?.duration ?? calculateMovingTime(points);
 
   let totalElapsed = existingSummary?.totalElapsedTime ?? 0;
-  if (!totalElapsed && points.length > 1 && points[0].time && points[points.length - 1].time) {
-    totalElapsed =
-      (points[points.length - 1].time!.getTime() - points[0].time!.getTime()) / 1000;
+  if (!totalElapsed && points.length > 1) {
+    const validTimestamps = points
+      .map((p) =>
+        p.time instanceof Date && !isNaN(p.time.getTime()) ? p.time.getTime() : null
+      )
+      .filter((t): t is number => t !== null);
+
+    if (validTimestamps.length > 1) {
+      const minTime = Math.min(...validTimestamps);
+      const maxTime = Math.max(...validTimestamps);
+      totalElapsed = Math.max(0, (maxTime - minTime) / 1000);
+    }
   }
   if (!totalElapsed) totalElapsed = duration;
 

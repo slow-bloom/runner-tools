@@ -130,4 +130,53 @@ describe('TCX Parser & Serializer', () => {
     ];
     expect(() => serializeToTCX(points)).not.toThrow();
   });
+
+  it('returns localized defaultName on successful parse when locale is provided', () => {
+    const act = parseTCX(SAMPLE_TCX, { locale: 'zh-CN' });
+    expect(act.name).toBe('运动记录');
+  });
+
+  it('serializes 0 calories by default or caller-supplied calories without inventing estimations', () => {
+    const points = [
+      { lat: 31.2, lon: 121.4, ele: 10, time: new Date('2026-03-01T07:00:00Z'), hr: 140, cad: 180, distance: 10000 },
+    ];
+    // Default should be 0 (unknown/unmeasured), NOT 600 kcal
+    const defaultXml = serializeToTCX(points);
+    expect(defaultXml).toContain('<Calories>0</Calories>');
+
+    // Caller-supplied calories must be honored
+    const customXml = serializeToTCX(points, { calories: 520 });
+    expect(customXml).toContain('<Calories>520</Calories>');
+  });
+
+  it('calculates trackpoint average cadence when lap-level cadence is absent, without trackpoints corrupting lap summary', () => {
+    const tcxWithoutLapCadence = `<?xml version="1.0" encoding="UTF-8"?>
+<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
+  <Activities>
+    <Activity Sport="Running">
+      <Id>2026-03-01T07:00:00Z</Id>
+      <Lap StartTime="2026-03-01T07:00:00Z">
+        <TotalTimeSeconds>100.0</TotalTimeSeconds>
+        <DistanceMeters>300.0</DistanceMeters>
+        <Track>
+          <Trackpoint>
+            <Time>2026-03-01T07:00:00Z</Time>
+            <DistanceMeters>0.0</DistanceMeters>
+            <Cadence>180</Cadence>
+          </Trackpoint>
+          <Trackpoint>
+            <Time>2026-03-01T07:00:50Z</Time>
+            <DistanceMeters>150.0</DistanceMeters>
+            <Cadence>200</Cadence>
+          </Trackpoint>
+        </Track>
+      </Lap>
+    </Activity>
+  </Activities>
+</TrainingCenterDatabase>`;
+
+    const act = parseTCX(tcxWithoutLapCadence);
+    // Point cadences 180 and 200 must yield 190 (mean), NOT 180 (from first trackpoint)
+    expect(act.summary.avgCadence).toBe(190);
+  });
 });

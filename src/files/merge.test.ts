@@ -85,4 +85,58 @@ describe('Activity Merge', () => {
     const mergedZh = mergeActivities([act1, act2], { locale: 'zh' });
     expect(mergedZh.name).toBe('晨跑 (合并)');
   });
+
+  it('preserves recorded summary statistics on singleton merges without trackpoints', () => {
+    const act: Activity = {
+      name: 'Trackless Lap',
+      points: [],
+      summary: {
+        distance: 1000,
+        duration: 300,
+        totalElapsedTime: 300,
+        avgPaceSecs: 300,
+        avgHeartRate: 155,
+        maxHeartRate: 165,
+        avgCadence: 180,
+        maxCadence: 184,
+        totalAscent: 15,
+        totalDescent: 10,
+        avgPower: 260,
+        maxPower: 290,
+        sport: 'running',
+        subSport: null,
+      },
+    };
+
+    const merged = mergeActivities([act]);
+    expect(merged.points).toHaveLength(0);
+    // Preserves recorded summary statistics instead of zeroing out to 0m / 0s
+    expect(merged.summary.distance).toBe(1000);
+    expect(merged.summary.duration).toBe(300);
+    expect(merged.summary.avgPaceSecs).toBe(300);
+    expect(merged.summary.avgCadence).toBe(180);
+  });
+
+  it('preserves continuous distance and valid elapsed time when merging points with undated records', () => {
+    const baseDate = new Date('2026-03-01T08:00:00Z');
+    // An activity with 5 points: pt3 is undated between 10s and 20s
+    const act: Activity = {
+      name: 'Interval Run',
+      points: [
+        { lat: 0, lon: 0, ele: 0, time: baseDate, hr: null, cad: null, distance: 0 },
+        { lat: 0, lon: 0, ele: 0, time: new Date(baseDate.getTime() + 10000), hr: null, cad: null, distance: 50 },
+        { lat: 0, lon: 0, ele: 0, time: null, hr: null, cad: null, distance: 100 },
+        { lat: 0, lon: 0, ele: 0, time: new Date(baseDate.getTime() + 20000), hr: null, cad: null, distance: 150 },
+        { lat: 0, lon: 0, ele: 0, time: new Date(baseDate.getTime() + 30000), hr: null, cad: null, distance: 200 },
+      ],
+      summary: calculateActivitySummary([]),
+    };
+
+    const merged = mergeActivities([act], { sortChronologically: true });
+    // Distance must continuously reach 200m without false reset spikes (e.g. 250m)
+    expect(merged.points[merged.points.length - 1].distance).toBe(200);
+    expect(merged.summary.distance).toBe(200);
+    // Elapsed time from valid timestamp endpoints must be 30s
+    expect(merged.summary.totalElapsedTime).toBe(30);
+  });
 });

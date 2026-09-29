@@ -102,6 +102,8 @@ export interface TCXExportOptions {
   creator?: string;
   /** Sport category in <Activity Sport="...">. Defaults to "Running". */
   sport?: string;
+  /** Optional recorded total calories in kcal. Defaults to 0 (unknown/unmeasured). */
+  calories?: number;
   /** Optional language or custom dictionary override. */
   locale?: LocaleInput;
 }

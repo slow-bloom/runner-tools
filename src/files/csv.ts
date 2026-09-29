@@ -7,32 +7,60 @@ export const CSV_HEADER =
   'Timestamp,Latitude,Longitude,Elevation(m),Distance(m),HeartRate(bpm),Cadence(spm),Speed(m/s),Power(w)';
 
 /**
- * Robust RFC 4180 compliant CSV line parser.
- * Handles quoted fields, embedded commas, and escaped double quotes ("").
+ * RFC 4180 compliant CSV parser that extracts all rows and columns
+ * while preserving quoted fields containing embedded newlines (\r, \n) and escaped quotes ("").
  */
-export function parseCsvLine(line: string): string[] {
-  const fields: string[] = [];
-  let current = '';
+export function parseCsvRecords(csvText: string): string[][] {
+  const records: string[][] = [];
+  let currentRow: string[] = [];
+  let currentField = '';
   let inQuotes = false;
 
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
+  for (let i = 0; i < csvText.length; i++) {
+    const char = csvText[i];
+
     if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
+      if (inQuotes && csvText[i + 1] === '"') {
+        currentField += '"';
         i++; // skip escaped quote
       } else {
         inQuotes = !inQuotes;
       }
     } else if (char === ',' && !inQuotes) {
-      fields.push(current.trim());
-      current = '';
+      currentRow.push(currentField.trim());
+      currentField = '';
+    } else if ((char === '\r' || char === '\n') && !inQuotes) {
+      if (char === '\r' && csvText[i + 1] === '\n') {
+        i++; // skip LF of CRLF
+      }
+      currentRow.push(currentField.trim());
+      currentField = '';
+      if (currentRow.length > 1 || (currentRow.length === 1 && currentRow[0] !== '')) {
+        records.push(currentRow);
+      }
+      currentRow = [];
     } else {
-      current += char;
+      currentField += char;
     }
   }
-  fields.push(current.trim());
-  return fields;
+
+  if (currentField !== '' || currentRow.length > 0) {
+    currentRow.push(currentField.trim());
+    if (currentRow.length > 1 || (currentRow.length === 1 && currentRow[0] !== '')) {
+      records.push(currentRow);
+    }
+  }
+
+  return records;
+}
+
+/**
+ * Robust RFC 4180 compliant single-line CSV parser.
+ * Handles quoted fields, embedded commas, and escaped double quotes ("").
+ */
+export function parseCsvLine(line: string): string[] {
+  const records = parseCsvRecords(line);
+  return records.length > 0 ? records[0] : [];
 }
 
 /**
@@ -68,7 +96,7 @@ export function serializeToCSV(activityOrPoints: Activity | Trackpoint[]): strin
 
 /**
  * Parse standard runner CSV text into an Activity object.
- * Supports quoted fields, ISO timestamps, and custom language dictionaries.
+ * Supports quoted fields (including embedded newlines), ISO timestamps, and custom language dictionaries.
  *
  * @param csvText CSV string with header
  * @param options Optional parser options such as locale override
@@ -86,8 +114,8 @@ export function parseCSV(csvText: string, options?: ParseTrackOptions): Activity
     };
   }
 
-  const lines = csvText.trim().split(/\r?\n/);
-  if (lines.length <= 1) {
+  const records = parseCsvRecords(csvText.trim());
+  if (records.length <= 1) {
     return {
       name: defaultName,
       points: [],
@@ -95,8 +123,7 @@ export function parseCSV(csvText: string, options?: ParseTrackOptions): Activity
     };
   }
 
-  const headerLine = lines[0].toLowerCase();
-  const headers = parseCsvLine(headerLine);
+  const headers = records[0].map((h) => h.toLowerCase());
 
   const idxTime = headers.findIndex((h) => h.includes('time'));
   const idxLat = headers.findIndex((h) => h.includes('lat'));
@@ -110,11 +137,8 @@ export function parseCSV(csvText: string, options?: ParseTrackOptions): Activity
 
   const rawPoints: Trackpoint[] = [];
 
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-
-    const cols = parseCsvLine(line);
+  for (let i = 1; i < records.length; i++) {
+    const cols = records[i];
 
     let time: Date | null = null;
     if (idxTime >= 0 && cols[idxTime]) {
@@ -148,7 +172,7 @@ export function parseCSV(csvText: string, options?: ParseTrackOptions): Activity
   const summary = calculateActivitySummary(normalizedPoints);
 
   return {
-    name: 'Activity',
+    name: defaultName,
     points: normalizedPoints,
     summary,
   };
