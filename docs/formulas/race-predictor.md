@@ -109,7 +109,7 @@ const result = calculateRacePredictions({
 
 if (result) {
   for (const item of result.predictions) {
-    console.log(`${item.name}: ${item.timeFormatted} (${item.paceFormatted} /km)`);
+    console.log(`${item.distanceLabel}: ${item.timeFormatted} (${item.paceFormatted} /km)`);
   }
 }
 ```

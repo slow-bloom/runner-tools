@@ -69,20 +69,34 @@ export interface PaceSolverResult {
   finishTable: PaceFinishTableItem[];
 }
 
+const DISTANCE_MIN = 0.01;
+const DISTANCE_MAX = 10000;
+const DISTANCE_EPS = 1e-9;
+
+function normalizeDistanceEndpoint(dist: number): number {
+  if (Math.abs(dist - DISTANCE_MIN) <= DISTANCE_EPS) return DISTANCE_MIN;
+  if (Math.abs(dist - DISTANCE_MAX) <= DISTANCE_EPS) return DISTANCE_MAX;
+  return dist;
+}
+
+function isValidDistance(dist: number): boolean {
+  return Number.isFinite(dist) && dist >= DISTANCE_MIN - DISTANCE_EPS && dist <= DISTANCE_MAX + DISTANCE_EPS;
+}
+
 /**
  * Pure calculation: pace in seconds per unit
  */
 export function calculatePace(distance: number, timeSeconds: number): number | null {
   if (
     !Number.isFinite(distance) ||
-    distance < 0.01 ||
-    distance > 10000 ||
+    !isValidDistance(distance) ||
     !Number.isFinite(timeSeconds) ||
     timeSeconds <= 0
   ) {
     return null;
   }
-  const pace = timeSeconds / distance;
+  const normDist = normalizeDistanceEndpoint(distance);
+  const pace = timeSeconds / normDist;
   // Reasonable physiological running boundaries: 60 s/unit (sprint) to 3600 s/unit (slow walk)
   if (pace < 60 || pace > 3600) return null;
   return pace;
@@ -94,15 +108,15 @@ export function calculatePace(distance: number, timeSeconds: number): number | n
 export function calculateTime(distance: number, paceSeconds: number): number | null {
   if (
     !Number.isFinite(distance) ||
-    distance < 0.01 ||
-    distance > 10000 ||
+    !isValidDistance(distance) ||
     !Number.isFinite(paceSeconds) ||
     paceSeconds <= 0
   ) {
     return null;
   }
   if (paceSeconds < 60 || paceSeconds > 3600) return null;
-  const time = distance * paceSeconds;
+  const normDist = normalizeDistanceEndpoint(distance);
+  const time = normDist * paceSeconds;
   return Number.isFinite(time) && time > 0 ? time : null;
 }
 
@@ -120,7 +134,8 @@ export function calculateDistance(timeSeconds: number, paceSeconds: number): num
   }
   if (paceSeconds < 60 || paceSeconds > 3600) return null;
   const dist = timeSeconds / paceSeconds;
-  return Number.isFinite(dist) && dist >= 0.01 && dist <= 10000 ? dist : null;
+  if (!isValidDistance(dist)) return null;
+  return normalizeDistanceEndpoint(dist);
 }
 
 /**
@@ -205,7 +220,7 @@ export function solvePace(params: PaceSolverParams): PaceSolverResult | null {
 
   // Validate defined parameters against physiological and operational domains
   if (isDefined(distance)) {
-    if (!Number.isFinite(distance) || distance! < 0.01 || distance! > 10000) {
+    if (!Number.isFinite(distance) || !isValidDistance(distance!)) {
       return null;
     }
   }
@@ -230,27 +245,30 @@ export function solvePace(params: PaceSolverParams): PaceSolverResult | null {
   if (!isDefined(distance)) {
     solvedField = 'distance';
     const dist = calculateDistance(timeSeconds!, paceSeconds!);
-    if (dist === null || dist < 0.01 || dist > 10000) return null;
+    if (dist === null) return null;
     finalDist = dist;
     finalPace = paceSeconds!;
     finalTime = timeSeconds!;
   } else if (!isDefined(paceSeconds)) {
     solvedField = 'pace';
-    const pace = calculatePace(distance!, timeSeconds!);
+    const normDist = normalizeDistanceEndpoint(distance!);
+    const pace = calculatePace(normDist, timeSeconds!);
     if (pace === null || pace < 60 || pace > 3600) return null;
-    finalDist = distance!;
+    finalDist = normDist;
     finalPace = pace;
     finalTime = timeSeconds!;
   } else {
     solvedField = 'time';
-    const time = calculateTime(distance!, paceSeconds!);
+    const normDist = normalizeDistanceEndpoint(distance!);
+    const time = calculateTime(normDist, paceSeconds!);
     if (time === null) return null;
-    finalDist = distance!;
+    finalDist = normDist;
     finalPace = paceSeconds!;
     finalTime = time;
   }
 
-  if (finalDist < 0.01 || finalDist > 10000) return null;
+  if (!isValidDistance(finalDist)) return null;
+  finalDist = normalizeDistanceEndpoint(finalDist);
 
   const isKm = unit === 'km';
   const loc = getLocale(lang);

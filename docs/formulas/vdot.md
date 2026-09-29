@@ -142,8 +142,8 @@ if (result) {
   console.log(`Easy Pace: ${result.zones.E.lowPaceFormatted} - ${result.zones.E.highPaceFormatted} /km`);
   console.log(`Threshold Pace: ${result.zones.T.lowPaceFormatted} - ${result.zones.T.highPaceFormatted} /km`);
   
-  for (const eq of result.equivalentTimes) {
-    console.log(`${eq.label}: ${eq.timeFormatted}`);
+  for (const eq of result.equivalentPerformances) {
+    console.log(`${eq.distanceLabel}: ${eq.timeFormatted}`);
   }
 }
 ```

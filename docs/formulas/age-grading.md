@@ -41,19 +41,23 @@ $$\text{Open Equivalent Time} = \text{Actual Finish Time} \times \left(\frac{\te
 
 ```typescript
 function calculateAgeGrading(
-  params: AgeGradingParams
+  params: AgeGradingParams,
+  options?: CalculateAgeGradingOptions
 ): AgeGradingResult | null;
 ```
 
-#### `AgeGradingParams`
+#### `AgeGradingParams` & `CalculateAgeGradingOptions`
 
 ```typescript
 interface AgeGradingParams {
-  gender: 'M' | 'F';
+  gender: 'M' | 'F' | 'male' | 'female';
   age: number; // 5 to 100
   distance: 5000 | 10000 | 21097 | 42195 | '5k' | '10k' | 'halfMarathon' | 'marathon';
   timeSeconds: number;
-  lang?: string;
+}
+
+interface CalculateAgeGradingOptions {
+  locale?: string | DeepPartial<RunnerToolsLocale>;
 }
 ```
 
@@ -63,29 +67,23 @@ interface AgeGradingParams {
 interface AgeGradingResult {
   score: number;                         // e.g. 74.2
   scoreFormatted: string;                // "74.2%"
-  level: {
-    key: string;                         // e.g. "regionalClass"
-    label: string;                       // e.g. "Regional Class"
-    badgeColor: string;
-  };
-  ageEquivalentTimeSeconds: number;      // Open equivalent time
-  ageEquivalentTimeFormatted: string;    // e.g. "1:28:45"
-  standardTimeSeconds: number;           // WMA standard for age
-  openStandardTimeSeconds: number;       // WMA standard for open
+  level: FormattedAgeGradingLevel;       // { key, label, color, bgColor, minScore }
+  ageEquivalentSeconds: number;          // Open equivalent time in seconds
+  ageEquivalentTimeFormatted: string;    // e.g. "41:35"
+  ageStandardSeconds: number;            // WMA standard for age
+  ageStandardFormatted: string;          // Formatted age standard
+  openStandardSeconds: number;           // WMA standard for open
+  openStandardFormatted: string;         // Formatted open standard
+  raw: RawAgeGradingResult;
 }
 ```
 
 ### `calculateAgeGradingRaw`
 
-Low-level helper returning numeric scores without localized string wrappers.
+Low-level pure calculation helper returning numeric scores and standards without localized string wrappers.
 
 ```typescript
-function calculateAgeGradingRaw(
-  gender: 'M' | 'F',
-  age: number,
-  distanceMeters: number,
-  timeSeconds: number
-): { score: number; equivalentSeconds: number } | null;
+function calculateAgeGradingRaw(params: AgeGradingParams): RawAgeGradingResult | null;
 ```
 
 ---
@@ -104,13 +102,15 @@ function calculateAgeGradingRaw(
 import { calculateAgeGrading } from '@slow-bloom/runner-tools';
 
 // 45-year-old female running a 44:30 10K
-const result = calculateAgeGrading({
-  gender: 'F',
-  age: 45,
-  distance: 10000,
-  timeSeconds: 2670, // 44m 30s
-  lang: 'en',
-});
+const result = calculateAgeGrading(
+  {
+    gender: 'F',
+    age: 45,
+    distance: 10000,
+    timeSeconds: 2670, // 44m 30s
+  },
+  { locale: 'en' }
+);
 
 if (result) {
   console.log(`Age-Graded Score: ${result.scoreFormatted}`); // ~75.4%

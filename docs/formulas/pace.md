@@ -57,7 +57,7 @@ interface PaceSolverParams {
 
 ```typescript
 interface PaceSolverResult {
-  solvedField: 'pace' | 'time' | 'distance';
+  solvedField: 'distance' | 'pace' | 'time';
   distance: number;
   distanceFormatted: string; // Resolves unit via locale dictionary
   paceSeconds: number;
@@ -66,8 +66,8 @@ interface PaceSolverResult {
   timeFormatted: string;     // e.g. "45:00"
   speedKmh: number;
   speedMph: number;
-  splits: PaceSplitItem[];
-  paceTable: PaceFinishTableItem[];
+  unit: PaceUnit;
+  finishTable: PaceFinishTableItem[];
 }
 ```
 
@@ -76,15 +76,18 @@ interface PaceSolverResult {
 Converts pace across metric and imperial systems and outputs equivalent speed and benchmark finish times.
 
 ```typescript
-function convertPace(params: PaceConversionParams): PaceConversionResult | null;
+function convertPace(
+  params: PaceConversionParams,
+  options?: { locale?: LocaleInput }
+): PaceConversionResult | null;
 ```
 
 ### Pure Helpers
 
 ```typescript
-function calculatePace(distance: number, timeSeconds: number): number;
-function calculateTime(distance: number, paceSeconds: number): number;
-function calculateDistance(timeSeconds: number, paceSeconds: number): number;
+function calculatePace(distance: number, timeSeconds: number): number | null;
+function calculateTime(distance: number, paceSeconds: number): number | null;
+function calculateDistance(timeSeconds: number, paceSeconds: number): number | null;
 ```
 
 ---
@@ -93,7 +96,7 @@ function calculateDistance(timeSeconds: number, paceSeconds: number): number;
 
 - **Distance Range**: $0.01 \le \text{distance} \le 10{,}000$ (both supplied and computed).
 - **Pace Range**: $60\text{ s} \le \text{pace} \le 3600\text{ s}$ per km/mi.
-- **Pace Table Offsets**: In pace variation tables, offsets resulting in paces $< 60\text{ s}$ or $> 3600\text{ s}$ are returned with `paceSecs: null`, `timeSeconds: null`, and `'—'` formatted strings rather than silently clamping to the boundary.
+- **Pace Table Offsets**: In pace variation tables (`finishTable`), offsets ranging from −10 to +10 seconds (`[-10, -5, 0, 5, 10]`) resulting in paces $< 60\text{ s}$ or $> 3600\text{ s}$ are returned with `paceSecs: null`, `timeSeconds: null`, and `'—'` formatted strings rather than silently clamping to the boundary.
 
 ---
 

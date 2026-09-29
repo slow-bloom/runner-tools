@@ -10,16 +10,6 @@ const localeRegistry = new Map<string, RunnerToolsLocale>();
 localeRegistry.set('en', enLocale);
 localeRegistry.set('zh', zhLocale);
 
-/**
- * Register a new or custom locale into the registry
- * @param langCode Language tag (e.g. 'fr', 'fr-FR', 'es')
- * @param locale Locale dictionary object
- */
-export function registerLocale(langCode: string, locale: RunnerToolsLocale): void {
-  if (!langCode || typeof langCode !== 'string') return;
-  localeRegistry.set(langCode.toLowerCase(), locale);
-}
-
 export type DeepPartial<T> = T extends Function
   ? T
   : T extends Array<infer U>
@@ -57,6 +47,24 @@ export function deepMerge<T extends Record<string, unknown>>(
 }
 
 export type LocaleInput = string | DeepPartial<RunnerToolsLocale> | undefined;
+
+/**
+ * Register a new or custom locale into the registry.
+ * Incomplete dictionaries are merged with English defaults to guarantee full dictionary coverage.
+ * @param langCode Language tag (e.g. 'fr', 'fr-FR', 'es')
+ * @param locale Locale dictionary object (full or partial)
+ */
+export function registerLocale(
+  langCode: string,
+  locale: RunnerToolsLocale | DeepPartial<RunnerToolsLocale>
+): void {
+  if (!langCode || typeof langCode !== 'string') return;
+  const merged = deepMerge(
+    enLocale as unknown as Record<string, unknown>,
+    locale as Record<string, unknown>
+  ) as unknown as RunnerToolsLocale;
+  localeRegistry.set(langCode.toLowerCase(), merged);
+}
 
 /**
  * Resolve locale object with hierarchical fallback:

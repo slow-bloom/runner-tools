@@ -69,17 +69,23 @@ function estimateMaxHR(
 
 ```typescript
 function calculateHeartRateZones(
-  params: HeartRateZonesParams
+  params: HeartRateZonesParams,
+  options?: CalculateHeartRateZonesOptions
 ): HeartRateZonesResult | null;
 ```
 
-#### `HeartRateZonesParams`
+#### `HeartRateZonesParams` & `CalculateHeartRateZonesOptions`
 
 ```typescript
 type HeartRateZonesParams =
-  | { method: 'maxhr'; maxHR: number; lang?: string }
-  | { method: 'karvonen'; maxHR: number; restingHR: number; lang?: string }
-  | { method: 'lthr'; lthr: number; lang?: string };
+  | { method: 'maxhr'; maxHR: number }
+  | { method: 'karvonen'; maxHR: number; restingHR: number }
+  | { method: 'lthr'; lthr: number };
+
+interface CalculateHeartRateZonesOptions {
+  locale?: string | DeepPartial<RunnerToolsLocale>;
+  colors?: Partial<Record<HeartRateZoneKey, ZoneColorDefinition>>;
+}
 ```
 
 #### `HeartRateZonesResult`
@@ -87,10 +93,20 @@ type HeartRateZonesParams =
 ```typescript
 interface HeartRateZonesResult {
   method: 'maxhr' | 'karvonen' | 'lthr';
-  maxHR?: number;
-  restingHR?: number;
-  lthr?: number;
-  zones: HeartRateZoneItem[]; // Array of 5 zones
+  zones: FormattedHeartRateZone[]; // Array of 5 zones
+}
+
+interface FormattedHeartRateZone {
+  zone: 'z1' | 'z2' | 'z3' | 'z4' | 'z5';
+  name: string;
+  categoryName: string;
+  description: string;
+  low: number;
+  high: number | null;
+  bpmFormatted: string;
+  pctFormatted: string;
+  basisFormatted: string;
+  color: ZoneColorDefinition;
 }
 ```
 
@@ -125,7 +141,7 @@ const karvonenResult = calculateHeartRateZones({
 
 if (karvonenResult) {
   for (const z of karvonenResult.zones) {
-    console.log(`${z.name} (${z.label}): ${z.bpmFormatted}`);
+    console.log(`${z.name} (${z.categoryName}): ${z.bpmFormatted}`);
   }
 }
 

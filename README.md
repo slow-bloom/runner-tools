@@ -78,11 +78,11 @@ const marathonSecs = predictRaceTime(10000, 2700, 42195, 1.06); // ~12421s (3:27
 
 // 3. Calculate Karvonen Heart Rate Reserve (HRR) zones
 const hr = calculateHeartRateZones({ method: 'karvonen', maxHR: 190, restingHR: 55 });
-console.log('Zone 2:', hr?.zones[1].bpmFormatted); // "136 - 150 bpm"
+console.log('Zone 2:', hr?.zones[1].bpmFormatted); // "137 - 150 bpm"
 
 // 4. Solve pace from distance and duration
 const pace = solvePace({ distance: 10, timeSeconds: 2700, unit: 'km' });
-console.log('Pace:', pace?.paceFormatted); // "4'30\" /km"
+console.log('Pace:', pace?.paceFormatted); // "4'30\""
 ```
 
 ---

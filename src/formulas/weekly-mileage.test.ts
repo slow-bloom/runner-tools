@@ -84,6 +84,11 @@ describe('Weekly Mileage Plan Calculator', () => {
     expect(plan!.weeks[1].distance).toBe(1.01);
     expect(plan!.weeks[plan!.weeks.length - 1].distance).toBe(1.2);
     expect(plan!.weeks[plan!.weeks.length - 1].isTarget).toBe(true);
+
+    // Verify that NO week exceeds the configured 1% cap (specifically testing week 16: 1.14 -> 1.15, not 1.16)
+    for (let i = 1; i < plan!.weeks.length; i++) {
+      expect(plan!.weeks[i].pctChange).toBeLessThanOrEqual(1.0);
+    }
   });
 
   it('does not exceed the configured weekly increase cap due to rounding', () => {

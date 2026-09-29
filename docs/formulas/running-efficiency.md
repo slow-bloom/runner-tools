@@ -61,11 +61,12 @@ Comprehensive evaluation combining form economy and aerobic efficiency.
 
 ```typescript
 function calculateRunningEfficiency(
-  params: RunningEfficiencyParams
+  params: RunningEfficiencyParams,
+  options?: RunningEfficiencyOptions
 ): RunningEfficiencyResult;
 ```
 
-#### `RunningEfficiencyParams`
+#### `RunningEfficiencyParams` & `RunningEfficiencyOptions`
 
 ```typescript
 interface RunningEfficiencyParams {
@@ -76,16 +77,19 @@ interface RunningEfficiencyParams {
   paceSeconds?: number;
   paceUnit?: 'km' | 'mi';
   heartRateBpm?: number;
-  lang?: string;
+}
+
+interface RunningEfficiencyOptions {
+  locale?: string | DeepPartial<RunnerToolsLocale>;
 }
 ```
 
 #### Individual Pure Calculators
 
 ```typescript
-function calculateVerticalRatio(voCm: number, strideM: number): number | null;
-function calculateDutyFactor(gctMs: number, cadenceSpm: number): number | null;
-function calculateEfficiencyFactor(paceSecs: number, hrBpm: number, unit?: 'km' | 'mi'): number | null;
+function calculateVerticalRatio(verticalOscillationCm: number, strideLengthM: number): number | null;
+function calculateDutyFactor(cadenceSpm: number, groundContactTimeMs: number): number | null;
+function calculateEfficiencyFactor(speedMs: number, heartRateBpm: number): number | null;
 ```
 
 ---
@@ -99,16 +103,18 @@ import {
 } from '@slow-bloom/runner-tools';
 
 // 1. Calculate combined efficiency report
-const report = calculateRunningEfficiency({
-  verticalOscillationCm: 8.4,
-  strideLengthM: 1.18,
-  cadenceSpm: 178,
-  groundContactTimeMs: 230,
-  paceSeconds: 300, // 5:00 min/km
-  paceUnit: 'km',
-  heartRateBpm: 142,
-  lang: 'en',
-});
+const report = calculateRunningEfficiency(
+  {
+    verticalOscillationCm: 8.4,
+    strideLengthM: 1.18,
+    cadenceSpm: 178,
+    groundContactTimeMs: 230,
+    paceSeconds: 300, // 5:00 min/km
+    paceUnit: 'km',
+    heartRateBpm: 142,
+  },
+  { locale: 'en' }
+);
 
 if (report.formEconomy?.verticalRatio) {
   console.log(`Vertical Ratio: ${report.formEconomy.verticalRatioFormatted}`); // "7.1%"
@@ -127,4 +133,4 @@ if (report.aerobicEfficiency?.efficiencyFactor) {
 
 1. **Cavanagh, P. R., & Kram, R.** (1989). "Stride length in distance running: velocity, body dimensions, and added mass effects". *Medicine & Science in Sports & Exercise*, 21(4), 467–479.
 2. **Friel, J.** (2009). *The Triathlete's Training Bible* (3rd ed.). VeloPress.
-3. **van Oeveren, J., et al.** (2017). "Optimal cadence in distance running". *Sports Biomechanics*, 18(6), 617–631.
+3. **van Oeveren, J., de Ruiter, C. J., Beek, P. J., & van Dieën, J. H.** (2017). "Optimal stride frequencies in running at different speeds". *PLOS ONE*, 12(10), e0184273. DOI: 10.1371/journal.pone.0184273.

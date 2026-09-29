@@ -24,21 +24,23 @@ The library currently ships with complete dictionaries for:
 
 ## Using Locales
 
-### Passing Language Tag
+Depending on the function signature, locale inputs (`LocaleInput`: language tag string or custom partial dictionary object) are provided either via `params.lang` or via an optional `options` argument (`{ locale }`):
 
-All top-level presentation formulas accept an optional `lang` parameter:
+### 1. Parameter Property (`params.lang`)
+
+Modules using single-parameter configuration objects accept `lang`:
 
 ```typescript
 import { calculateVDOT, solvePace } from '@slow-bloom/runner-tools';
 
-// Formatted in Simplified Chinese
+// Formatted in Simplified Chinese via params.lang
 const vdotZh = calculateVDOT({
   distanceMeters: 5000,
   timeSeconds: 1200,
   lang: 'zh-CN',
 });
 
-// Formatted in English
+// Formatted in English via params.lang
 const paceEn = solvePace({
   distance: 10,
   timeSeconds: 2700,
@@ -46,16 +48,56 @@ const paceEn = solvePace({
 });
 ```
 
+*Applicable functions*: `calculateVDOT`, `calculateRacePredictions`, `solvePace`, `calculateWeeklyMileagePlan`.
+
+### 2. Options Argument (`{ locale }`)
+
+Modules that separate numerical parameters from presentation options take `{ locale }` as a second argument:
+
+```typescript
+import {
+  calculateHeartRateZones,
+  calculateAgeGrading,
+  calculateRunningEfficiency,
+  convertPace,
+} from '@slow-bloom/runner-tools';
+
+// Heart rate zones with Chinese localization
+const hrZh = calculateHeartRateZones(
+  { method: 'karvonen', maxHR: 190, restingHR: 55 },
+  { locale: 'zh' }
+);
+
+// Age grading with Chinese localization
+const ageZh = calculateAgeGrading(
+  { gender: 'M', age: 40, distance: 10000, timeSeconds: 2400 },
+  { locale: 'zh' }
+);
+
+// Running efficiency report with Chinese localization
+const effZh = calculateRunningEfficiency(
+  { verticalOscillationCm: 8.4, strideLengthM: 1.18, cadenceSpm: 178, groundContactTimeMs: 230 },
+  { locale: 'zh' }
+);
+
+// Pace conversion with Chinese localization
+const paceConvZh = convertPace(
+  { paceSeconds: 300, paceUnit: 'km' },
+  { locale: 'zh' }
+);
+```
+
 ---
 
 ## Customizing and Extending Dictionaries
 
-You can register new languages or override existing terms using `registerLocale`:
+You can register new languages or override existing terms using `registerLocale`. In accordance with the library's localization contract, `registerLocale` automatically merges partial dictionaries with English (`enLocale`) defaults for any omitted keys (such as `pace.distances.k5`), preventing runtime crashes.
 
 ```typescript
 import { registerLocale, solvePace } from '@slow-bloom/runner-tools';
 
 // 1. Register a French locale or override specific fields
+// Omitted fields automatically fall back to the English baseline
 registerLocale('fr', {
   common: {
     hours: 'h',
@@ -66,11 +108,10 @@ registerLocale('fr', {
     units: {
       km: 'km',
       mi: 'mi',
-      perKm: '/km',
-      perMi: '/mi',
+      minPerKm: 'min/km',
+      minPerMi: 'min/mi',
     },
   },
-  // Deep-merges with English default for any omitted fields
 });
 
 // 2. Use the registered locale

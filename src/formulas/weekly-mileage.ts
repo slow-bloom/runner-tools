@@ -44,8 +44,9 @@ export interface WeeklyMileageResult {
  * Scientific Basis & Provenance:
  * - 10% Volume Progression Heuristic: Popularized by Henderson (1979) and Dr. Joan Ullyot,
  *   and discussed extensively by Daniels (2014, Daniels' Running Formula, 3rd ed.). While widely
- *   adopted in endurance coaching, epidemiological research (Nielsen et al., 2014, "The 10% increase
- *   rule for preventing running-related injuries...", J Orthop Sports Phys Ther, 44(10):739-747)
+ *   adopted in endurance coaching, epidemiological research (Nielsen et al., 2014, "Excessive progression
+ *   in weekly running distance and risk of running-related injuries: An association which varies according to
+ *   type of injury", J Orthop Sports Phys Ther, 44(10):739-747, DOI: 10.2519/jospt.2014.5164)
  *   indicates that a volume increase cap alone does not guarantee injury immunity.
  * - Deload Cycles & Workload Management: Systematic recovery weeks (reducing volume by 20–30%
  *   every 3–4 weeks) follow foundational athletic periodization principles (Bompa & Haff, 2009,
@@ -107,8 +108,8 @@ export function calculateWeeklyMileagePlan(
 
   const weeks: WeeklyPlanItem[] = [];
 
-  let rawBuildVol = currentDistance;
   const initialDistance = Math.round(currentDistance * 100) / 100;
+  let rawBuildVol = initialDistance;
 
   weeks.push({
     weekNumber: 1,
@@ -151,21 +152,24 @@ export function calculateWeeklyMileagePlan(
       const rawDeload = rawBuildVol * (1 - deloadReductionPct / 100);
       weekVol = Math.round(rawDeload * 100) / 100;
     } else {
+      const lastBuildWeek = [...weeks].reverse().find((w) => !w.isDeload);
+      const baseVol = lastBuildWeek ? lastBuildWeek.distance : weeks[weeks.length - 1].distance;
+      const maxAllowed = Math.floor((baseVol * (1 + maxWeeklyIncreasePct / 100) + 1e-9) * 100) / 100;
+
       const nextRawBuild = rawBuildVol * (1 + maxWeeklyIncreasePct / 100);
-      if (nextRawBuild >= targetDistance) {
+      if (nextRawBuild >= targetDistance && targetDistance <= maxAllowed) {
         rawBuildVol = targetDistance;
         weekVol = Math.round(targetDistance * 100) / 100;
         status = 'target';
         isTarget = true;
       } else {
-        rawBuildVol = nextRawBuild;
         let rounded = Math.round(nextRawBuild * 100) / 100;
-        // Ensure displayed prescription does not exceed configured increase cap due to rounding
-        const prevVol = weeks[weeks.length - 1].distance;
-        if (rounded > prevVol * (1 + maxWeeklyIncreasePct / 100) + 1e-9) {
-          rounded = Math.floor(nextRawBuild * 100) / 100;
+        // Strictly enforce cap on every final weekly prescription derived from previous emitted distance
+        if (rounded > maxAllowed) {
+          rounded = maxAllowed;
         }
         weekVol = rounded;
+        rawBuildVol = rounded;
         status = 'build';
       }
     }

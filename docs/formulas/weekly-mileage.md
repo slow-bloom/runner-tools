@@ -10,7 +10,7 @@ Generates structured, progressive running volume plans based on the classical 10
 The guidance to restrict weekly volume progression to no more than 10% originates as an empirical training heuristic widely credited to early distance coaches and runners (Henderson, 1979; Daniels, 2014). It was established to mitigate sudden, drastic training spikes.
 
 ### Scientific Evidence and Limitations
-Epidemiological and clinical investigations (notably the 1-year prospective PRISMO cohort study by Nielsen et al., 2014) demonstrated that strictly adhering to a weekly volume increase $< 10\%$ **does not guarantee individual immunity against running-related injuries (RRI)**. Running injuries involve multifaceted etiologies including:
+Epidemiological and clinical investigations (notably the 1-year prospective study on progression and injury risk by Nielsen et al., 2014) demonstrated that strictly adhering to a weekly volume increase $< 10\%$ **does not guarantee individual immunity against running-related injuries (RRI)**. Running injuries involve multifaceted etiologies including:
 - Previous injury history
 - Sudden pace/intensity spikes (acute training load)
 - Biomechanical loading rates and cadence
@@ -26,7 +26,7 @@ Incorporating periodic deload weeks (reducing volume by 20% to 30% every 3 to 4 
 ## Calculation Dynamics
 
 1. **Full-Precision Progression**: Internal progressions preserve floating-point volume states across weekly iterations to prevent compounding rounding stalls on modest targets.
-2. **Cap Compliance**: The displayed rounded prescription is verified against the configured cap (`maxWeeklyIncreasePct`). If regular rounding would cause the displayed value to exceed the threshold (e.g. 1.5 to 1.7 instead of 1.65), a floor operation ensures strict cap compliance.
+2. **Cap Compliance**: Every final weekly prescription strictly enforces the configured increase cap (`maxWeeklyIncreasePct`) relative to the previous emitted baseline distance, ensuring displayed prescriptions never exceed the configured threshold.
 3. **Structured Recovery**: Deload weeks drop volume by `deloadReductionPct` relative to the preceding peak build week without truncating long-term trajectory.
 
 ---
@@ -37,14 +37,14 @@ Incorporating periodic deload weeks (reducing volume by 20% to 30% every 3 to 4 
 
 ```typescript
 function calculateWeeklyMileagePlan(
-  params: WeeklyMileagePlanParams
-): WeeklyMileagePlanResult | null;
+  params: WeeklyMileageParams
+): WeeklyMileageResult | null;
 ```
 
-#### `WeeklyMileagePlanParams`
+#### `WeeklyMileageParams`
 
 ```typescript
-interface WeeklyMileagePlanParams {
+interface WeeklyMileageParams {
   currentDistance: number;      // 1 to 500 units
   targetDistance: number;       // 1 to 500 units (must be >= currentDistance)
   unit?: 'km' | 'mi';           // default: 'km'
@@ -52,34 +52,39 @@ interface WeeklyMileagePlanParams {
   includeDeload?: boolean;      // default: true
   deloadFrequency?: number;     // e.g. every 4th week (default: 4)
   deloadReductionPct?: number;  // percentage drop for deload (default: 20)
-  lang?: string;                // default: 'en'
+  lang?: string | DeepPartial<RunnerToolsLocale>; // default: 'en'
 }
 ```
 
-#### `WeeklyMileagePlanResult`
+#### `WeeklyMileageResult`
 
 ```typescript
-interface WeeklyMileagePlanResult {
+interface WeeklyMileageResult {
   currentDistance: number;
   targetDistance: number;
+  unit: 'km' | 'mi';
   totalWeeks: number;
   timelineSummary: string; // e.g. "8 Weeks" (localized via dictionary)
-  weeks: WeeklyMileageItem[];
+  weeks: WeeklyPlanItem[];
+  maxVolume: number;
+  averageWeeklyVolume: number;
+  totalDistance: number;
 }
 ```
 
-#### `WeeklyMileageItem`
+#### `WeeklyPlanItem`
 
 ```typescript
-interface WeeklyMileageItem {
+interface WeeklyPlanItem {
   weekNumber: number;
   distance: number;
   distanceFormatted: string; // e.g. "27.5 km"
+  status: 'base' | 'build' | 'deload' | 'target';
+  statusLabel: string;       // Localized: "Baseline", "Build", "Recovery Deload", "Target Achieved"
   pctChange: number;         // percentage difference vs previous week
   pctChangeFormatted: string;// e.g. "+10.0%" or "-20.0%"
   isDeload: boolean;
-  isPeak: boolean;
-  statusLabel: string;       // Localized: "Base", "Build", "Deload", "Target Reached"
+  isTarget: boolean;
 }
 ```
 
@@ -118,6 +123,6 @@ if (plan) {
 
 1. **Henderson, J.** (1979). *Long Run Solution*. World Publications.
 2. **Daniels, J.** (2014). *Daniels' Running Formula* (3rd ed.). Human Kinetics.
-3. **Nielsen, R. O., et al.** (2014). "The 10% increase rule for preventing running-related injuries: a secondary analysis of a 1-year PRISMO cohort study". *Journal of Orthopaedic & Sports Physical Therapy*, 44(10), 739–747.
+3. **Nielsen, R. O., et al.** (2014). "Excessive progression in weekly running distance and risk of running-related injuries: An association which varies according to type of injury". *Journal of Orthopaedic & Sports Physical Therapy*, 44(10), 739–747. DOI: 10.2519/jospt.2014.5164.
 4. **Gabbett, T. J.** (2016). "The training—injury prevention paradox: should athletes be training smarter and harder?". *British Journal of Sports Medicine*, 50(5), 273–280.
 5. **Bompa, T. O., & Haff, G. G.** (2009). *Periodization: Theory and Methodology of Training* (5th ed.). Human Kinetics.

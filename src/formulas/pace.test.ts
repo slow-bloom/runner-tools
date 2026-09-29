@@ -126,6 +126,22 @@ describe('Pace Solver', () => {
     expect(solvePace({ timeSeconds: 36000000, paceSeconds: 3000 })).toBeNull();
   });
 
+  it('supports minimum-distance round trips with floating-point tolerance', () => {
+    // calculateTime(0.01, 205) returns 2.05
+    const time = calculateTime(0.01, 205);
+    expect(time).toBe(2.05);
+
+    // 2.05 / 205 in IEEE-754 produces 0.009999999999999998; tolerance and normalization should yield 0.01
+    const dist = calculateDistance(2.05, 205);
+    expect(dist).toBe(0.01);
+
+    // solvePace with time 2.05 and pace 205 must solve distance without rejecting boundary
+    const solved = solvePace({ timeSeconds: 2.05, paceSeconds: 205 });
+    expect(solved).not.toBeNull();
+    expect(solved!.solvedField).toBe('distance');
+    expect(solved!.distance).toBe(0.01);
+  });
+
   it('explicitly represents unsupported finish table offsets with null and em-dash without silent clamping', () => {
     // paceSeconds 60: offsets -10 and -5 would result in 50s and 55s (< 60s minimum)
     const res = solvePace({ distance: 5, paceSeconds: 60, unit: 'km' });

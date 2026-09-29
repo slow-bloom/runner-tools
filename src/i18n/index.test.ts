@@ -62,4 +62,27 @@ describe('i18n Locale Resolver & Registration', () => {
     expect(custom.vdot.zones.E.shortName).toBe(enLocale.vdot.zones.E.shortName);
     expect(custom.vdot.zones.E.description).toBe(enLocale.vdot.zones.E.description);
   });
+
+  it('should merge partial dictionaries with English defaults when registered via registerLocale', () => {
+    registerLocale('es', {
+      common: {
+        hours: 'h',
+        minutes: 'min',
+        seconds: 's',
+      },
+      pace: {
+        units: {
+          minPerKm: 'min/km',
+          minPerMi: 'min/mi',
+        },
+      },
+    });
+
+    const es = getLocale('es');
+    expect(es.common.hours).toBe('h');
+    expect(es.pace.units.minPerKm).toBe('min/km');
+    // Crucial: Omitted fields such as pace.distances.k5 or vdot must NOT be undefined!
+    expect(es.pace.distances.k5).toBe(enLocale.pace.distances.k5);
+    expect(es.vdot.zones.E.name).toBe(enLocale.vdot.zones.E.name);
+  });
 });
