@@ -68,17 +68,17 @@ function calculateVDOTScore(
 Calculates the complete VDOT analysis including all five training pace zones and equivalent race times.
 
 ```typescript
-function calculateVDOT(params: VDOTParams): VDOTResult | null;
+function calculateVDOT(options: CalculateVDOTOptions): VDOTCalculationResult | null;
 ```
 
-#### `VDOTParams`
+#### `CalculateVDOTOptions`
 
 ```typescript
-interface VDOTParams {
+interface CalculateVDOTOptions {
   distanceMeters: number;
   timeSeconds: number;
   unit?: 'km' | 'mi'; // default: 'km'
-  lang?: string;      // default: 'en'
+  lang?: string | DeepPartial<RunnerToolsLocale>; // default: 'en'
 }
 ```
 
@@ -96,10 +96,9 @@ interface VDOTCalculationResult {
 interface EquivalentPerformance {
   distanceMeters: number;
   distanceLabel: string;
-  distanceFormatted: string;
-  timeSeconds: number;
+  predictedSeconds: number;
   timeFormatted: string;
-  paceSeconds: number;
+  targetPaceSecs: number;
   paceFormatted: string;
   unit: 'km' | 'mi';
 }
