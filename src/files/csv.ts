@@ -84,7 +84,9 @@ export function serializeToCSV(activityOrPoints: Activity | Trackpoint[]): strin
     const eleStr = pt.ele !== null && Number.isFinite(pt.ele) ? pt.ele.toFixed(2) : '';
     const distStr = pt.distance !== null && Number.isFinite(pt.distance) ? pt.distance.toFixed(1) : '';
     const hrStr = pt.hr !== null && Number.isFinite(pt.hr) ? String(Math.round(pt.hr)) : '';
-    const cadStr = pt.cad !== null && Number.isFinite(pt.cad) ? String(Math.round(pt.cad)) : '';
+    const cadence = pt.cad !== null && pt.sport === undefined && pt.cadenceUnit === undefined && pt.cad > 0 && pt.cad < 120
+      ? pt.cad * 2 : pt.cad;
+    const cadStr = cadence !== null && Number.isFinite(cadence) ? String(cadence) : '';
     const spdStr = pt.speed !== undefined && pt.speed !== null && Number.isFinite(pt.speed) ? pt.speed.toFixed(2) : '';
     const pwrStr = pt.power !== undefined && pt.power !== null && Number.isFinite(pt.power) ? String(Math.round(pt.power)) : '';
 
@@ -151,7 +153,7 @@ export function parseCSV(csvText: string, options?: ParseTrackOptions): Activity
     const ele = idxEle >= 0 && cols[idxEle] ? parseFloat(cols[idxEle]) : null;
     const dist = idxDist >= 0 && cols[idxDist] ? parseFloat(cols[idxDist]) : null;
     const hr = idxHr >= 0 && cols[idxHr] ? parseInt(cols[idxHr], 10) : null;
-    const cad = idxCad >= 0 && cols[idxCad] ? parseInt(cols[idxCad], 10) : null;
+    const cad = idxCad >= 0 && cols[idxCad] ? parseFloat(cols[idxCad]) : null;
     const spd = idxSpd >= 0 && cols[idxSpd] ? parseFloat(cols[idxSpd]) : null;
     const pwr = idxPwr >= 0 && cols[idxPwr] ? parseFloat(cols[idxPwr]) : null;
 
@@ -165,6 +167,7 @@ export function parseCSV(csvText: string, options?: ParseTrackOptions): Activity
       cad: cad !== null && Number.isFinite(cad) ? cad : null,
       speed: spd !== null && Number.isFinite(spd) ? spd : null,
       power: pwr !== null && Number.isFinite(pwr) ? pwr : null,
+      ...(idxCad >= 0 && headers[idxCad].includes('spm') ? { sport: 'running', cadenceUnit: 'steps/min' } : {}),
     });
   }
 

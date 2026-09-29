@@ -1,6 +1,6 @@
 /**
  * Data structures and types for running track file parsing, transformation, and serialization.
- * Compatible with GPX 1.1, Garmin TCX 2.0, Google Earth KML, and GeoJSON.
+ * Compatible with FIT, GPX 1.1, Garmin TCX 2.0, Google Earth KML, and GeoJSON.
  */
 
 import type { LocaleInput } from '../i18n/index.js';
@@ -21,8 +21,13 @@ export interface Trackpoint {
   time: Date | null;
   /** Heart rate in beats per minute (bpm). Null if unavailable. */
   hr: number | null;
-  /** Cadence in steps per minute (spm / rpm). Null if unavailable. */
+  /**
+   * Running cadence in steps/minute; cycling cadence in revolutions/minute. Null if unavailable.
+   * Mark low canonical values with cadenceUnit or sport to bypass legacy single-leg heuristics.
+   */
   cad: number | null;
+  /** Explicit cadence units. When present, do not apply legacy single-leg/magnitude heuristics. */
+  cadenceUnit?: 'steps/min' | 'cycles/min';
   /** Cumulative distance from the start of the activity in meters. */
   distance: number | null;
   /** Instantaneous speed in meters per second (m/s). Null if unavailable. */
@@ -31,12 +36,22 @@ export interface Trackpoint {
   power?: number | null;
   /** Step length in millimeters (mm). Null if unavailable. */
   stepLength?: number | null;
-  /** Vertical oscillation in millimeters (mm) or centimeters. Null if unavailable. */
+  /** Vertical oscillation in millimeters (mm). Null if unavailable. */
   verticalOscillation?: number | null;
   /** Ground contact stance time in milliseconds (ms). Null if unavailable. */
   stanceTime?: number | null;
   /** Ambient or sensor temperature in degrees Celsius (°C). Null if unavailable. */
   temp?: number | null;
+  /** Vertical oscillation as a percentage of step length. */
+  verticalRatio?: number | null;
+  /** Ground contact time balance in percent. */
+  stanceTimeBalance?: number | null;
+  /** Ground contact time as a percentage of the stride cycle. */
+  stanceTimePercent?: number | null;
+  /** Per-record sport. FIT parsing always sets this, including single-sport activities. */
+  sport?: string;
+  /** Source FIT fields. Remove when stripping GPS: opaque fields can contain location data. */
+  fit?: FITRecordMetadata;
 }
 
 export interface ActivitySummary {
@@ -52,9 +67,9 @@ export interface ActivitySummary {
   avgHeartRate: number | null;
   /** Maximum heart rate in bpm. Null if no heart rate data recorded. */
   maxHeartRate: number | null;
-  /** Average cadence in steps per minute (spm). Null if no cadence recorded. */
+  /** Average running steps/minute or cycling revolutions/minute. Null if unavailable or mixed units. */
   avgCadence: number | null;
-  /** Maximum cadence in steps per minute (spm). Null if no cadence recorded. */
+  /** Maximum running steps/minute or cycling revolutions/minute. Null if unavailable or mixed units. */
   maxCadence: number | null;
   /** Total elevation gain (ascent) in meters. */
   totalAscent: number | null;
@@ -68,6 +83,34 @@ export interface ActivitySummary {
   sport: string;
   /** Secondary sport classification if specified. */
   subSport?: string | null;
+  /** Recorded energy expenditure in kilocalories; absent if unmeasured. */
+  totalCalories?: number | null;
+  /** Cycles/strides, not steps (one running stride is two steps); fractional cycles are supported. */
+  totalCycles?: number | null;
+  /** Average speed in meters per second. */
+  avgSpeed?: number | null;
+  /** Maximum speed in meters per second. */
+  maxSpeed?: number | null;
+  /** Average step length in millimeters. */
+  avgStepLength?: number | null;
+  /** Average vertical oscillation in millimeters. */
+  avgVerticalOscillation?: number | null;
+  /** Average ground contact time in milliseconds. */
+  avgStanceTime?: number | null;
+  /** Average ground contact time as a percentage of the stride cycle. */
+  avgStanceTimePercent?: number | null;
+  /** Average ground contact time balance in percent. */
+  avgStanceTimeBalance?: number | null;
+  /** Average vertical oscillation as a percentage of step length. */
+  avgVerticalRatio?: number | null;
+  /** Normalized power in watts. */
+  normalizedPower?: number | null;
+  /** Recorded temperature statistics in degrees Celsius. */
+  avgTemperature?: number | null;
+  maxTemperature?: number | null;
+  minTemperature?: number | null;
+  /** Recorded moving time in seconds, when distinct from timer time. */
+  totalMovingTime?: number | null;
 }
 
 export interface Activity {
@@ -77,6 +120,79 @@ export interface Activity {
   points: Trackpoint[];
   /** Computed or recorded summary statistics. */
   summary: ActivitySummary;
+  /** Source FIT metadata. Opaque fields may contain location, device IDs, or stale aggregates. */
+  fit?: FITMetadata;
+}
+
+/** Native values are unscaled. Developer numbers use their descriptor; bigint values remain exact raw integers. */
+export type FITValue = number | bigint | string | null | Array<number | bigint | null>;
+
+export interface FITField {
+  number: number;
+  /** FIT base-type byte, including its endian-awareness bit. */
+  baseType: number;
+  /** Owned copy of the original bytes; authoritative for opaque-field re-encoding. */
+  data: Uint8Array;
+  value: FITValue;
+}
+
+export interface FITDeveloperField {
+  number: number;
+  developerDataIndex: number;
+  /** Owned bytes in the containing message's byte order; never inferred from the field name. */
+  data: Uint8Array;
+  /** Available when a field_description message describes this developer field. */
+  baseType?: number;
+  name?: string;
+  units?: string;
+  value?: FITValue;
+  /** Explicit native-field equivalence from the field_description, never guessed from a name. */
+  nativeMessageNumber?: number;
+  nativeFieldNumber?: number;
+}
+
+export interface FITRecordMetadata {
+  littleEndian: boolean;
+  fields: FITField[];
+  developerFields: FITDeveloperField[];
+}
+
+export interface FITMessage extends FITRecordMetadata {
+  globalMessageNumber: number;
+  /** Number of record messages preceding this message in the source stream. */
+  recordIndex: number;
+  /** Decoded native summary values for session/lap messages; raw fields remain available. */
+  summary?: Partial<ActivitySummary>;
+}
+
+export interface FITMetadata {
+  protocolVersion: number;
+  profileVersion: number;
+  /** Source record count and independent summary snapshot, used to detect edited scopes. */
+  recordCount?: number;
+  sourceSummary?: ActivitySummary;
+  /**
+   * Non-record messages, including developer_data_id (207), field_description (206),
+   * sessions (18), laps (19), and unknown messages. Keep developer descriptors whenever
+   * retaining point.fit. Discard source summary messages after editing their scope.
+   */
+  messages: FITMessage[];
+}
+
+export interface FITExportOptions {
+  /** Sport-profile name in FIT output; defaults to the activity name. */
+  name?: string;
+  /** File creator's product name; defaults to "ApexRun". */
+  creator?: string;
+  /** Omit all lap messages. Session and activity messages are still written. */
+  stripLaps?: boolean;
+  /**
+   * Fallback activity start when no usable recorded clock exists.
+   * Does not retime existing points or an unchanged FIT session, and never assigns
+   * fabricated timestamps to records with missing times.
+   */
+  startTime?: Date;
+  locale?: LocaleInput;
 }
 
 export interface ParseTrackOptions {
@@ -147,4 +263,3 @@ export interface GeoJSONExportOptions {
   /** Optional language or custom dictionary override. */
   locale?: LocaleInput;
 }
-

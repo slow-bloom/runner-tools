@@ -6,11 +6,18 @@ const SITES = [
   '../website/apexrun-zh',
 ];
 
-const bundlePath = resolve('dist/runner-tools.global.js');
+const artifacts = [
+  'runner-tools.global.js',
+  'runner-tools.global.js.map',
+  'runner-tools.worker.js',
+  'runner-tools.worker.js.map',
+];
 
-if (!existsSync(bundlePath)) {
-  console.error('Error: dist/runner-tools.global.js not found. Run "npm run build" first.');
-  process.exit(1);
+for (const artifact of artifacts) {
+  if (!existsSync(resolve('dist', artifact))) {
+    console.error(`Error: dist/${artifact} not found. Run "npm run build" first.`);
+    process.exit(1);
+  }
 }
 
 let syncedCount = 0;
@@ -21,9 +28,11 @@ for (const relSite of SITES) {
     if (!existsSync(targetDir)) {
       mkdirSync(targetDir, { recursive: true });
     }
-    const targetPath = resolve(targetDir, 'runner-tools.global.js');
-    copyFileSync(bundlePath, targetPath);
-    console.log(`Synced bundle -> ${targetPath}`);
+    for (const artifact of artifacts) {
+      const targetPath = resolve(targetDir, artifact);
+      copyFileSync(resolve('dist', artifact), targetPath);
+      console.log(`Synced artifact -> ${targetPath}`);
+    }
 
     const licenseSrc = resolve('LICENSE');
     if (existsSync(licenseSrc)) {

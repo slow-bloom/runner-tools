@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+- Zero-runtime-dependency FIT activity decoding and encoding, including CRC validation, compressed timestamps, endian-aware fields, running dynamics and typed native/developer metadata.
+- `parseActivityFile`, `processActivities` and `serializeActivity` as a common file-converter interface.
+- A standalone `runner-tools.worker.js` and `createFileConverterClient` for local asynchronous parsing, editing and downloads, with explicit worker failures and request correlation.
+- English and Chinese converter status, validation and metadata-loss messages.
+- Regression coverage for edited summaries, GPS-free exports, developer-index collisions, missing timestamps and actual worker message/binary transfers.
+
+### Changed
+- Privacy edits remove opaque FIT metadata from both activities and points, in addition to visible coordinates, with explicit warnings. Merges and GPS recalculation preserve record-level developer data while rebuilding source summaries.
+- Edited file summaries retain canonical FIT cadence and recompute running dynamics from retained samples.
+- Website synchronization now includes the worker and source maps alongside the existing browser bundle and license.
+
 ## [0.2.0] - 2026-09-29
 
 ### Added
@@ -35,4 +49,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Weekly Mileage Ramp-Up Planner (`weekly-mileage`)**: Safe volume progression implementing the 10% rule and structured deload recovery cycles.
 - **Internationalization (`i18n`)**: Hierarchical locale resolution with deep partial merging over `enLocale`.
 - **Packaging & Dual Module Output**: ESM (`.js` + `.d.ts`) and CommonJS (`.cjs` + `.d.cts`) for full TypeScript `node16` / `nodenext` compatibility, plus standalone browser bundle (`runner-tools.global.js`) preserving MIT legal banner.
-

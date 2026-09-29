@@ -310,9 +310,10 @@ export function cropTrack(points: Trackpoint[], options: CropTrackOptions): Trac
 /**
  * Strip GPS coordinates from all trackpoints for privacy protection
  * while retaining all physiological metrics (time, distance, hr, cadence, power).
+ * Also removes opaque per-point FIT fields. Use processActivities to redact activity-level metadata too.
  */
 export function stripTrackGPS(points: Trackpoint[]): Trackpoint[] {
-  return points.map((pt) => ({
+  return points.map(({ fit: _sourceFields, ...pt }) => ({
     ...pt,
     lat: null,
     lon: null,
@@ -383,22 +384,35 @@ export function calculateActivitySummary(
   let avgCad = existingSummary?.avgCadence ?? null;
   let maxCad = existingSummary?.maxCadence ?? null;
   if ((avgCad === null || maxCad === null) && points.length > 0) {
-    let cadSum = 0;
-    let cadCount = 0;
+    let canonicalCadSum = 0;
+    let canonicalCadCount = 0;
+    let legacyCadSum = 0;
+    let legacyCadCount = 0;
     let cadMax = -Infinity;
     for (let i = 0; i < points.length; i++) {
       const c = points[i].cad;
       if (c !== null && c !== undefined && Number.isFinite(c) && c > 0) {
         const fullCad = c < 120 ? c * 2 : c;
-        cadSum += c;
-        cadCount++;
-        if (fullCad > cadMax) cadMax = fullCad;
+        const canonical = points[i].cadenceUnit !== undefined || points[i].sport !== undefined;
+        if (canonical) {
+          canonicalCadSum += c;
+          canonicalCadCount++;
+          if (c > cadMax) cadMax = c;
+        } else {
+          legacyCadSum += c;
+          legacyCadCount++;
+          if (fullCad > cadMax) cadMax = fullCad;
+        }
       }
     }
+    const cadCount = canonicalCadCount + legacyCadCount;
     if (cadCount > 0) {
       if (avgCad === null) {
-        const meanCad = cadSum / cadCount;
-        avgCad = Math.round(meanCad < 120 ? meanCad * 2 : meanCad);
+        const legacyMean = legacyCadCount > 0 ? legacyCadSum / legacyCadCount : 0;
+        const normalizedLegacySum =
+          legacyCadSum * (legacyCadCount > 0 && legacyMean < 120 ? 2 : 1);
+        const meanCad = (canonicalCadSum + normalizedLegacySum) / cadCount;
+        avgCad = canonicalCadCount > 0 ? meanCad : Math.round(meanCad);
       }
       if (maxCad === null) maxCad = cadMax;
     }
@@ -430,7 +444,7 @@ export function calculateActivitySummary(
     }
   }
 
-  return {
+  const summary: ActivitySummary = {
     distance: Math.round(totalDist * 100) / 100,
     duration: Math.round(duration),
     totalElapsedTime: Math.round(totalElapsed),
@@ -446,4 +460,40 @@ export function calculateActivitySummary(
     sport: existingSummary?.sport ?? 'running',
     subSport: existingSummary?.subSport ?? null,
   };
+  const metrics = [
+    ['speed', 'avgSpeed', 'maxSpeed'],
+    ['stepLength', 'avgStepLength'],
+    ['verticalOscillation', 'avgVerticalOscillation'],
+    ['stanceTime', 'avgStanceTime'],
+    ['stanceTimePercent', 'avgStanceTimePercent'],
+    ['stanceTimeBalance', 'avgStanceTimeBalance'],
+    ['verticalRatio', 'avgVerticalRatio'],
+    ['temp', 'avgTemperature', 'maxTemperature'],
+  ] as const;
+  for (const [pointKey, averageKey, maximumKey] of metrics) {
+    let total = 0;
+    let count = 0;
+    let maximum = -Infinity;
+    let minimum = Infinity;
+    for (const point of points) {
+      const value = point[pointKey];
+      if (value == null || !Number.isFinite(value)) continue;
+      total += value;
+      count++;
+      maximum = Math.max(maximum, value);
+      minimum = Math.min(minimum, value);
+    }
+    if (count > 0) {
+      summary[averageKey] = existingSummary?.[averageKey] ?? total / count;
+      if (maximumKey) summary[maximumKey] = existingSummary?.[maximumKey] ?? maximum;
+      if (pointKey === 'temp') summary.minTemperature = existingSummary?.minTemperature ?? minimum;
+    } else {
+      if (existingSummary?.[averageKey] != null) summary[averageKey] = existingSummary[averageKey];
+      if (maximumKey && existingSummary?.[maximumKey] != null) summary[maximumKey] = existingSummary[maximumKey];
+    }
+  }
+  if (duration > 0 && (existingSummary?.distance !== undefined || points.some((point) => point.distance !== null))) {
+    summary.avgSpeed = existingSummary?.avgSpeed ?? totalDist / duration;
+  }
+  return summary;
 }

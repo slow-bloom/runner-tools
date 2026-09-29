@@ -6,6 +6,31 @@ export const zhLocale: RunnerToolsLocale = {
     defaultActivityName: '运动记录',
     emptyActivityName: '空活动',
     mergedActivitySuffix: ' (合并)',
+    converter: {
+      reading: '正在本机读取文件…',
+      processing: '正在更新运动记录…',
+      exporting: '正在准备下载文件…',
+      completed: '转换后的文件已准备好。',
+      gpsRedacted: '已移除 GPS 坐标。请导出 FIT、TCX 或 CSV 保留心率等数据。',
+      missingTimestamps: '这条轨迹没有逐点时间戳。导出 FIT 时可指定运动起始时间，不会为轨迹点编造记录时间。',
+      operationFailed: '转换未能完成，请检查文件；若仍无法处理，请刷新页面重试。',
+      elevationCalculated: '* 累计爬升按 GPS 点位计算',
+      elevationRecorded: '* 累计爬升为文件记录值',
+      elevationComparison: '* 累计爬升按 GPS 点位计算（记录中的爬升为 {value} 米）',
+      warnings: {
+        'opaque-fit-data-removed': '隐私编辑已移除可能含有位置的 FIT 原始扩展字段与开发者数据，标准心率、步频等指标仍保留。',
+        'fit-summary-metadata-removed': '本次编辑会重新生成 FIT 的分段、事件与设备信息，逐点开发者指标仍保留。',
+      },
+      errors: {
+        'unsupported-format': '请选择 FIT、GPX、TCX、KML 或 CSV 文件。',
+        'invalid-file': '文件格式不完整或已损坏，请从记录设备重新导出后重试。',
+        'no-trackpoints': '文件中未找到任何轨迹点。',
+        'invalid-options': '请输入大于或等于零的有效裁剪距离，单位为米。',
+        'empty-result': '裁剪范围覆盖了整条轨迹，请减小起点或终点的裁剪距离。',
+        'coordinates-required': '此操作需要 GPS 坐标。无坐标的记录请导出为 FIT、TCX 或 CSV。',
+        'timestamps-required': '这条轨迹没有记录时间，导出 FIT 前请选择运动起始时间。',
+      },
+    },
   },
   vdot: {
     zones: {

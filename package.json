@@ -24,6 +24,7 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "build": "node build.mjs",
     "prepack": "npm test && npm run build",
@@ -58,6 +59,7 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^26.6.3",
+    "@vitest/coverage-v8": "^4.1.11",
     "esbuild": "^0.28.2",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11"

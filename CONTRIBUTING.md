@@ -41,6 +41,20 @@ Thank you for your interest in contributing to `@slow-bloom/runner-tools`! We we
    npm run build
    ```
 
+The file converter also builds `dist/runner-tools.worker.js`. Do not import that
+entry point into a page: it installs a worker message handler. Host it beside the
+browser bundle and call `createFileConverterClient()` with its URL.
+
+In the collection checkout, `npm run sync:website` builds and copies both bundles,
+their source maps and the MIT license into the English and Chinese websites.
+Keep parsing and editing in the shared library; website templates should only
+handle controls, localized messages, maps, charts and downloads.
+
+`npm run test:coverage` measures coverage with Vitest's V8 provider. Converter
+regressions include source-summary preservation, cropped summaries, FIT developer
+identifier remapping, opaque metadata removal during privacy edits, worker errors
+and binary transfers through an isolated worker.
+
 ---
 
 ## Architecture & Design Principles
@@ -52,6 +66,7 @@ When submitting code to this library, please adhere to these core principles:
 3. **No Silent Clamping**: Solvers and predictors must check physiological domains and bracket roots. If inputs are unsupported or outside valid ranges, return `null` rather than silently clamping to arbitrary boundaries.
 4. **Strict Dual Module Support**: Any exports must maintain strict compatibility with both ES Modules (`dist/index.js`, `dist/index.d.ts`) and CommonJS under TypeScript's `node16` resolution (`dist/index.cjs`, `dist/index.d.cts`).
 5. **Localization Contract**: Any user-facing strings or labels must provide fallback to the English dictionary (`enLocale`) and support deep partial overrides.
+6. **Explicit File Errors**: The high-level converter throws `FileConversionError` with a stable localization code for invalid input or unsupported edits. Workers must reject failed operations, never return an empty successful download or silently run expensive conversion on the UI thread.
 
 ---
 

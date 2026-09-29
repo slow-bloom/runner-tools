@@ -17,7 +17,7 @@ Experience these algorithms live in action on the web:
 - **[Age-Grading Calculator](https://apexrun.fit/tools/age-grading-calculator/)**
 - **[Running Efficiency Calculator](https://apexrun.fit/tools/running-efficiency-calculator/)**
 - **[Pace & Split Calculator](https://apexrun.fit/tools/pace-calculator/)**
-- **[Running Track File Converter](https://apexrun.fit/tools/running-file-converter/)**
+- **[Running Track File Converter](https://apexrun.fit/tools/running-file-converter/)** ([中文](https://www.apexrun.net/tools/running-file-converter/))
 - **[Weekly Mileage Ramp-Up Calculator](https://apexrun.fit/tools/weekly-mileage-calculator/)**
 
 
@@ -30,6 +30,7 @@ Experience these algorithms live in action on the web:
 - **Built-in i18n & Extensible**: Multilingual support with hierarchical locale fallback (`exact tag` $\to$ `base language` $\to$ `English default`) and deep custom dictionary merging.
 - **Strict Null Safety**: Clear contracts where invalid, unphysiological, or unsolvable inputs return `null` instead of throwing or generating `NaN`.
 - **No Silent Clamping**: Discontinuous boundary cases and out-of-domain offsets are explicitly exposed rather than clamped silently.
+- **Local File Conversion**: Read FIT, GPX, TCX, KML and CSV; export all five plus GeoJSON. A standalone Web Worker keeps decoding, editing and encoding off the browser's UI thread, without CDN parser imports or file uploads.
 
 ---
 
@@ -68,6 +69,8 @@ import {
   predictRaceTime,
   calculateHeartRateZones,
   solvePace,
+  parseGPX,
+  serializeToTCX,
 } from '@slow-bloom/runner-tools';
 
 // 1. Calculate Daniels VDOT & training paces
@@ -106,7 +109,7 @@ Detailed mathematical derivations, physiological domains, and complete API speci
 | **`running-efficiency`** | Formula | Vertical Ratio (VR), Duty Factor (DF), and Aerobic Efficiency Factor (EF) | [docs/formulas/running-efficiency.md](./docs/formulas/running-efficiency.md) |
 | **`pace`** | Formula | 3-way pace/time/distance solver, unit conversions & split tables | [docs/formulas/pace.md](./docs/formulas/pace.md) |
 | **`weekly-mileage`** | Formula | 10% progression rule, ACWR recovery periodization & deload cycles | [docs/formulas/weekly-mileage.md](./docs/formulas/weekly-mileage.md) |
-| **`files`** | Tool | GPX, TCX, KML, GeoJSON, CSV track parsing, cropping, GPS stripping & serialization | [docs/files/running-file-converter.md](./docs/files/running-file-converter.md) |
+| **`files`** | Tool | FIT, GPX, TCX, KML and CSV parsing, GeoJSON export, cropping, merging, GPS redaction and local Web Worker conversion | [docs/files/running-file-converter.md](./docs/files/running-file-converter.md) |
 | **`i18n`** | Guide | Custom dictionaries, locale registration, and fallback resolution | [docs/guides/i18n-and-customization.md](./docs/guides/i18n-and-customization.md) |
 
 ---
@@ -140,6 +143,13 @@ npm run typecheck
 
 # Build dual bundle & browser distribution
 npm run build
+
+# Measure coverage
+npm run test:coverage
+
+# In the Apex Run collection checkout, build and copy the browser bundles,
+# source maps and license into both ../website/apexrun and ../website/apexrun-zh
+npm run sync:website
 ```
 
 ---

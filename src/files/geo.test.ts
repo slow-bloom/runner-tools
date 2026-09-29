@@ -217,6 +217,23 @@ describe('Geographic & Track Utilities', () => {
       expect(summary.sport).toBe('running');
     });
 
+    it('normalizes legacy cadence after averaging while preserving explicit canonical samples', () => {
+      const legacy = calculateActivitySummary([
+        { lat: null, lon: null, ele: null, time: null, hr: null, cad: 90, distance: 0 },
+        { lat: null, lon: null, ele: null, time: null, hr: null, cad: 170, distance: 0 },
+      ]);
+      expect(legacy.avgCadence).toBe(130);
+      expect(legacy.maxCadence).toBe(180);
+
+      const mixed = calculateActivitySummary([
+        { lat: null, lon: null, ele: null, time: null, hr: null, cad: 90.5, cadenceUnit: 'steps/min', distance: 0 },
+        { lat: null, lon: null, ele: null, time: null, hr: null, cad: 85, distance: 0 },
+        { lat: null, lon: null, ele: null, time: null, hr: null, cad: 90, distance: 0 },
+      ]);
+      expect(mixed.avgCadence).toBeCloseTo((90.5 + 175 * 2) / 3);
+      expect(mixed.maxCadence).toBe(180);
+    });
+
     it('handles large tracks (150,000 points) without stack overflow RangeError', () => {
       const baseTime = new Date('2026-03-01T08:00:00Z').getTime();
       const count = 150000;

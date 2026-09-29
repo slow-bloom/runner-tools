@@ -79,9 +79,22 @@ await esbuild.build({
   target: 'es2020',
 });
 
+await esbuild.build({
+  entryPoints: ['src/files/worker.ts'],
+  outfile: 'dist/runner-tools.worker.js',
+  bundle: true,
+  format: 'iife',
+  banner: BANNER,
+  legalComments: 'inline',
+  sourcemap: true,
+  minify: true,
+  target: 'es2020',
+});
+
 console.log('Build complete! Artifacts in dist/:');
 console.log('  - dist/index.js (ESM)');
 console.log('  - dist/index.cjs (CJS)');
 console.log('  - dist/runner-tools.global.js (Browser IIFE, window.RunnerTools, MIT banner preserved)');
+console.log('  - dist/runner-tools.worker.js (Local file-conversion Web Worker)');
 console.log('  - dist/**/*.d.ts (ESM Type definitions)');
 console.log('  - dist/**/*.d.cts (CJS Type definitions for node16 compatibility)');

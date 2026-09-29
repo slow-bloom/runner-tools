@@ -63,6 +63,31 @@ export interface FilesI18n {
   defaultActivityName: string;
   emptyActivityName: string;
   mergedActivitySuffix: string;
+  converter: {
+    reading: string;
+    processing: string;
+    exporting: string;
+    completed: string;
+    gpsRedacted: string;
+    missingTimestamps: string;
+    operationFailed: string;
+    elevationCalculated: string;
+    elevationRecorded: string;
+    elevationComparison: string;
+    warnings: {
+      'opaque-fit-data-removed': string;
+      'fit-summary-metadata-removed': string;
+    };
+    errors: {
+      'unsupported-format': string;
+      'invalid-file': string;
+      'no-trackpoints': string;
+      'invalid-options': string;
+      'empty-result': string;
+      'coordinates-required': string;
+      'timestamps-required': string;
+    };
+  };
 }
 
 export interface RunnerToolsLocale {
@@ -175,6 +200,31 @@ export const enLocale: RunnerToolsLocale = {
     defaultActivityName: 'Activity',
     emptyActivityName: 'Empty Activity',
     mergedActivitySuffix: ' (Merged)',
+    converter: {
+      reading: 'Reading files locally...',
+      processing: 'Updating your activity...',
+      exporting: 'Preparing your download...',
+      completed: 'Your converted file is ready.',
+      gpsRedacted: 'GPS coordinates are removed. Use FIT, TCX or CSV to keep your sensor data.',
+      missingTimestamps: 'This route has no point timestamps. Choose an activity start time if needed for FIT export; missing point times stay missing.',
+      operationFailed: 'The conversion could not finish. Check the file and reload the page if the problem persists.',
+      elevationCalculated: '* Elevation gain calculated from GPS points',
+      elevationRecorded: '* Elevation gain from file record',
+      elevationComparison: '* Elevation gain calculated from GPS points (recorded: {value} m)',
+      warnings: {
+        'opaque-fit-data-removed': 'Opaque FIT fields and developer data are removed during privacy edits because they can contain locations. Standard sensor measurements are kept.',
+        'fit-summary-metadata-removed': 'Original FIT lap, event and device metadata is replaced for this edit. Record-level developer measurements are kept.',
+      },
+      errors: {
+        'unsupported-format': 'Choose a FIT, GPX, TCX, KML or CSV file.',
+        'invalid-file': 'The file is invalid or damaged. Export a fresh copy from the recording device.',
+        'no-trackpoints': 'No trackpoints were found in this file.',
+        'invalid-options': 'Enter valid crop distances in meters, starting from zero.',
+        'empty-result': 'The crop removes every trackpoint. Reduce the crop distances.',
+        'coordinates-required': 'GPS coordinates are required for this operation. Use FIT, TCX or CSV for a GPS-free export.',
+        'timestamps-required': 'Choose an activity start time before exporting this undated route as FIT.',
+      },
+    },
   },
   vdot: {
     zones: {

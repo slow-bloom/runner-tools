@@ -29,8 +29,9 @@ export function parseTCX(xmlText: string, options?: ParseTrackOptions): Activity
   }
 
   // Extract Sport
-  const sportMatch = xmlText.match(/<Activity\s+[^>]*Sport\s*=\s*(["'])(.*?)\1/i);
-  const sport = sportMatch ? sportMatch[2].toLowerCase() : 'running';
+  const sportMatch = xmlText.match(/<(?:[a-zA-Z0-9_-]+:)?Activity\s+[^>]*Sport\s*=\s*(["'])(.*?)\1/i);
+  const sportName = sportMatch ? sportMatch[2].toLowerCase() : 'running';
+  const sport = sportName === 'biking' ? 'cycling' : sportName === 'other' ? 'generic' : sportName;
 
   // Aggregate all Laps if present
   const lapMatches = extractAllTags(xmlText, 'Lap');
@@ -58,7 +59,9 @@ export function parseTCX(xmlText: string, options?: ParseTrackOptions): Activity
 
       const d = distVal && Number.isFinite(parseFloat(distVal)) ? parseFloat(distVal) : 0;
       const t = timeVal && Number.isFinite(parseFloat(timeVal)) ? parseFloat(timeVal) : 0;
-      const c = cadVal && Number.isFinite(parseInt(cadVal, 10)) ? parseInt(cadVal, 10) : null;
+      const rawCadence = cadVal && Number.isFinite(parseFloat(cadVal)) ? parseFloat(cadVal) : null;
+      const c = rawCadence !== null && sport === 'running' && rawCadence > 0 && rawCadence < 120
+        ? rawCadence * 2 : rawCadence;
 
       if (distVal !== null || timeVal !== null) {
         hasLapMetrics = true;
@@ -132,7 +135,7 @@ export function parseTCX(xmlText: string, options?: ParseTrackOptions): Activity
     const cadVal =
       getXmlChildTagValue(inner, 'Cadence') ||
       getXmlChildTagValue(inner, 'RunCadence');
-    const cad = cadVal !== null && Number.isFinite(parseInt(cadVal, 10)) ? parseInt(cadVal, 10) : null;
+    const cad = cadVal !== null && Number.isFinite(parseFloat(cadVal)) ? parseFloat(cadVal) : null;
 
     // Speed or Watts inside Extensions (TPX)
     const speedVal = getXmlChildTagValue(inner, 'Speed');
@@ -151,11 +154,12 @@ export function parseTCX(xmlText: string, options?: ParseTrackOptions): Activity
       distance,
       speed,
       power,
+      ...(sport !== 'running' ? { sport } : {}),
     });
   }
 
   const normalizedPoints = normalizeTrackDistances(rawPoints);
-  const summary = calculateActivitySummary(normalizedPoints, lapSummary);
+  const summary = calculateActivitySummary(normalizedPoints, lapSummary ?? { sport });
 
   return {
     name: defaultName,

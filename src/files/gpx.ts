@@ -32,6 +32,9 @@ export function parseGPX(xmlText: string, options?: ParseTrackOptions): Activity
   // Extract activity name
   const rawName = getXmlChildTagValue(xmlText, 'name');
   const name = rawName ? rawName.trim() : defaultName;
+  const rawSport = getXmlChildTagValue(xmlText, 'type')?.trim().toLowerCase();
+  const sport = rawSport === 'cycling' || rawSport === 'biking' ? 'cycling'
+    : rawSport === 'walking' || rawSport === 'hiking' ? rawSport : 'running';
 
   const trkptMatches = extractAllTags(xmlText, 'trkpt');
   const rawPoints: Trackpoint[] = [];
@@ -92,12 +95,13 @@ export function parseGPX(xmlText: string, options?: ParseTrackOptions): Activity
       distance: null,
       speed,
       temp,
+      ...(sport === 'cycling' ? { sport } : {}),
     });
   }
 
   // Calculate cumulative distances
   const normalizedPoints = normalizeTrackDistances(rawPoints);
-  const summary = calculateActivitySummary(normalizedPoints);
+  const summary = calculateActivitySummary(normalizedPoints, { sport });
 
   return {
     name,
@@ -126,6 +130,7 @@ export function serializeToGPX(
     (!Array.isArray(activityOrPoints) && activityOrPoints.name ? activityOrPoints.name : defaultName);
   const creator = options?.creator || 'ApexRun';
   const includeExtensions = options?.includeExtensions ?? true;
+  const sport = Array.isArray(activityOrPoints) ? 'running' : activityOrPoints.summary.sport;
 
   const startTimeIso = safeIsoTimestamp(points[0]?.time);
 
@@ -137,7 +142,7 @@ export function serializeToGPX(
   </metadata>
   <trk>
     <name>${escapeXml(activityName)}</name>
-    <type>running</type>
+    <type>${escapeXml(sport)}</type>
     <trkseg>`;
 
   for (const pt of points) {
