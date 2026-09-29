@@ -120,25 +120,12 @@ export function mergeActivities(
     };
   }
 
-  // 3. Concatenate activities while preserving source-distance provenance across boundaries
+  // 3. Concatenate points while retaining source-distance provenance
   const combinedPoints: Trackpoint[] = [];
-  let cumDistanceOffset = 0;
-
   for (const act of sortedActivities) {
-    if (act.points.length === 0) continue;
-
-    // Normalize distances within this source activity
-    const norm = normalizeTrackDistances(act.points);
-    const maxNormDist = norm.length > 0 ? (norm[norm.length - 1].distance ?? 0) : 0;
-
-    for (const pt of norm) {
-      combinedPoints.push({
-        ...pt,
-        distance: pt.distance !== null ? Math.round((pt.distance + cumDistanceOffset) * 100) / 100 : null,
-      });
+    for (const pt of act.points) {
+      combinedPoints.push({ ...pt });
     }
-
-    cumDistanceOffset += maxNormDist;
   }
 
   // 4. Stable chronological sort for points if internal sequence contains timestamp inversions

@@ -139,4 +139,26 @@ describe('Activity Merge', () => {
     // Elapsed time from valid timestamp endpoints must be 30s
     expect(merged.summary.totalElapsedTime).toBe(30);
   });
+
+  it('establishes chronological order before distance normalization without misinterpreting out-of-order points as resets', () => {
+    const baseDate = new Date('2026-03-01T08:00:00Z');
+    // Out-of-order points: [(10s, 100m), (0s, 0m), (20s, 200m)]
+    const act: Activity = {
+      name: 'Jitter Run',
+      points: [
+        { lat: 0, lon: 0, ele: 0, time: new Date(baseDate.getTime() + 10000), hr: null, cad: null, distance: 100 },
+        { lat: 0, lon: 0, ele: 0, time: new Date(baseDate.getTime() + 0), hr: null, cad: null, distance: 0 },
+        { lat: 0, lon: 0, ele: 0, time: new Date(baseDate.getTime() + 20000), hr: null, cad: null, distance: 200 },
+      ],
+      summary: calculateActivitySummary([]),
+    };
+
+    const merged = mergeActivities([act], { sortChronologically: true });
+    // Must produce sorted distances [0, 100, 200], NOT [100, 100, 300]
+    expect(merged.points.map((p) => p.distance)).toEqual([0, 100, 200]);
+    // 200m total distance and 20s moving time
+    expect(merged.summary.distance).toBe(200);
+    expect(merged.summary.duration).toBe(20);
+    expect(merged.summary.totalElapsedTime).toBe(20);
+  });
 });

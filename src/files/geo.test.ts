@@ -216,5 +216,29 @@ describe('Geographic & Track Utilities', () => {
       expect(summary.maxCadence).toBe(180);
       expect(summary.sport).toBe('running');
     });
+
+    it('handles large tracks (150,000 points) without stack overflow RangeError', () => {
+      const baseTime = new Date('2026-03-01T08:00:00Z').getTime();
+      const count = 150000;
+      const points: Trackpoint[] = new Array(count);
+
+      for (let i = 0; i < count; i++) {
+        points[i] = {
+          lat: 39.9,
+          lon: 116.4,
+          ele: 50,
+          time: new Date(baseTime + i * 1000),
+          hr: 140,
+          cad: 180,
+          distance: i * 3,
+        };
+      }
+
+      const summary = calculateActivitySummary(points);
+      expect(summary.totalElapsedTime).toBe(count - 1);
+      expect(summary.avgHeartRate).toBe(140);
+      expect(summary.maxHeartRate).toBe(140);
+      expect(summary.avgCadence).toBe(180);
+    });
   });
 });

@@ -335,15 +335,21 @@ export function calculateActivitySummary(
 
   let totalElapsed = existingSummary?.totalElapsedTime ?? 0;
   if (!totalElapsed && points.length > 1) {
-    const validTimestamps = points
-      .map((p) =>
-        p.time instanceof Date && !isNaN(p.time.getTime()) ? p.time.getTime() : null
-      )
-      .filter((t): t is number => t !== null);
+    let minTime = Infinity;
+    let maxTime = -Infinity;
+    let validCount = 0;
 
-    if (validTimestamps.length > 1) {
-      const minTime = Math.min(...validTimestamps);
-      const maxTime = Math.max(...validTimestamps);
+    for (let i = 0; i < points.length; i++) {
+      const ptTime = points[i].time;
+      if (ptTime instanceof Date && !isNaN(ptTime.getTime())) {
+        const t = ptTime.getTime();
+        if (t < minTime) minTime = t;
+        if (t > maxTime) maxTime = t;
+        validCount++;
+      }
+    }
+
+    if (validCount > 1 && maxTime >= minTime) {
       totalElapsed = Math.max(0, (maxTime - minTime) / 1000);
     }
   }
@@ -352,47 +358,74 @@ export function calculateActivitySummary(
   const distKm = totalDist / 1000;
   const avgPaceSecs = distKm > 0 && duration > 0 ? duration / distKm : 0;
 
-  // Heart rate
-  const hrPoints = points.filter((p) => p.hr !== null && Number.isFinite(p.hr) && p.hr! > 0);
-  const avgHr =
-    existingSummary?.avgHeartRate ??
-    (hrPoints.length > 0
-      ? Math.round(hrPoints.reduce((acc, p) => acc + p.hr!, 0) / hrPoints.length)
-      : null);
-  const maxHr =
-    existingSummary?.maxHeartRate ??
-    (hrPoints.length > 0 ? Math.max(...hrPoints.map((p) => p.hr!)) : null);
-
-  // Cadence
-  const cadPoints = points.filter((p) => p.cad !== null && Number.isFinite(p.cad) && p.cad! > 0);
-  let avgCad = existingSummary?.avgCadence ?? null;
-  if (avgCad === null && cadPoints.length > 0) {
-    let meanCad = cadPoints.reduce((acc, p) => acc + p.cad!, 0) / cadPoints.length;
-    // Normalize single-leg cadence (< 120) to full SPM
-    if (meanCad < 120) meanCad *= 2;
-    avgCad = Math.round(meanCad);
+  // Heart rate (iterative accumulation to handle arbitrarily large tracks without stack overflow)
+  let avgHr = existingSummary?.avgHeartRate ?? null;
+  let maxHr = existingSummary?.maxHeartRate ?? null;
+  if ((avgHr === null || maxHr === null) && points.length > 0) {
+    let hrSum = 0;
+    let hrCount = 0;
+    let hrMax = -Infinity;
+    for (let i = 0; i < points.length; i++) {
+      const hr = points[i].hr;
+      if (hr !== null && hr !== undefined && Number.isFinite(hr) && hr > 0) {
+        hrSum += hr;
+        hrCount++;
+        if (hr > hrMax) hrMax = hr;
+      }
+    }
+    if (hrCount > 0) {
+      if (avgHr === null) avgHr = Math.round(hrSum / hrCount);
+      if (maxHr === null) maxHr = hrMax;
+    }
   }
-  const maxCad =
-    existingSummary?.maxCadence ??
-    (cadPoints.length > 0
-      ? Math.max(...cadPoints.map((p) => (p.cad! < 120 ? p.cad! * 2 : p.cad!)))
-      : null);
+
+  // Cadence (iterative accumulation and single-leg SPM normalization)
+  let avgCad = existingSummary?.avgCadence ?? null;
+  let maxCad = existingSummary?.maxCadence ?? null;
+  if ((avgCad === null || maxCad === null) && points.length > 0) {
+    let cadSum = 0;
+    let cadCount = 0;
+    let cadMax = -Infinity;
+    for (let i = 0; i < points.length; i++) {
+      const c = points[i].cad;
+      if (c !== null && c !== undefined && Number.isFinite(c) && c > 0) {
+        const fullCad = c < 120 ? c * 2 : c;
+        cadSum += fullCad;
+        cadCount++;
+        if (fullCad > cadMax) cadMax = fullCad;
+      }
+    }
+    if (cadCount > 0) {
+      if (avgCad === null) avgCad = Math.round(cadSum / cadCount);
+      if (maxCad === null) maxCad = cadMax;
+    }
+  }
 
   // Elevation
   const { ascent, descent } = calculateElevationGain(points);
   const totalAscent = existingSummary?.totalAscent ?? ascent;
   const totalDescent = existingSummary?.totalDescent ?? descent;
 
-  // Power
-  const pwrPoints = points.filter((p) => p.power !== null && Number.isFinite(p.power));
-  const avgPwr =
-    existingSummary?.avgPower ??
-    (pwrPoints.length > 0
-      ? Math.round(pwrPoints.reduce((acc, p) => acc + p.power!, 0) / pwrPoints.length)
-      : null);
-  const maxPwr =
-    existingSummary?.maxPower ??
-    (pwrPoints.length > 0 ? Math.max(...pwrPoints.map((p) => p.power!)) : null);
+  // Power (iterative accumulation)
+  let avgPwr = existingSummary?.avgPower ?? null;
+  let maxPwr = existingSummary?.maxPower ?? null;
+  if ((avgPwr === null || maxPwr === null) && points.length > 0) {
+    let pwrSum = 0;
+    let pwrCount = 0;
+    let pwrMax = -Infinity;
+    for (let i = 0; i < points.length; i++) {
+      const p = points[i].power;
+      if (p !== null && p !== undefined && Number.isFinite(p)) {
+        pwrSum += p;
+        pwrCount++;
+        if (p > pwrMax) pwrMax = p;
+      }
+    }
+    if (pwrCount > 0) {
+      if (avgPwr === null) avgPwr = Math.round(pwrSum / pwrCount);
+      if (maxPwr === null) maxPwr = pwrMax;
+    }
+  }
 
   return {
     distance: Math.round(totalDist * 100) / 100,
