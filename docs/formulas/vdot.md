@@ -82,32 +82,46 @@ interface VDOTParams {
 }
 ```
 
-#### `VDOTResult`
+#### `VDOTCalculationResult`
 
 ```typescript
-interface VDOTResult {
+interface VDOTCalculationResult {
   vdot: number;
   vdotFormatted: string;
-  zones: {
-    E: TrainingZoneItem;
-    M: TrainingZoneItem;
-    T: TrainingZoneItem;
-    I: TrainingZoneItem;
-    R: TrainingZoneItem;
-  };
-  equivalentTimes: EquivalentRaceTimeItem[];
+  zones: Record<'E' | 'M' | 'T' | 'I' | 'R', PaceZoneResult>;
+  zonesList: PaceZoneResult[];
+  equivalentPerformances: EquivalentPerformance[];
+}
+
+interface EquivalentPerformance {
+  distanceMeters: number;
+  distanceLabel: string;
+  distanceFormatted: string;
+  timeSeconds: number;
+  timeFormatted: string;
+  paceSeconds: number;
+  paceFormatted: string;
+  unit: 'km' | 'mi';
 }
 ```
 
 ### `calculateEquivalentTimesRaw`
 
-Low-level helper returning equivalent finish times (in seconds) for standard distances without string formatting.
+Low-level pure calculation helper returning equivalent finish times and paces for specified distances. Returns `null` if the VDOT score is invalid.
 
 ```typescript
 function calculateEquivalentTimesRaw(
   vdot: number,
-  distances?: number[]
-): Record<number, number>;
+  distances?: readonly number[],
+  unit?: 'km' | 'mi'
+): RawEquivalentPerformance[] | null;
+
+interface RawEquivalentPerformance {
+  distanceMeters: number;
+  predictedSeconds: number;
+  targetPaceSecs: number;
+  unit: 'km' | 'mi';
+}
 ```
 
 ---

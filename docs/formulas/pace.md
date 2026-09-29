@@ -23,9 +23,9 @@ Given any two parameters of **Distance**, **Pace**, and **Time**, solves for the
 - **Solve Time**: $\text{Time} = \text{Distance} \times \text{Pace}$
 - **Solve Distance**: $\text{Distance} = \frac{\text{Time}}{\text{Pace}}$
 
-### 3. Split & Finish Projection Tables
+### 3. Finish Projection Tables (`finishTable`)
 
-Generates intermediate kilometer/mile checkpoint splits as well as localized ±5s, ±10s, ±15s pace offset projections for race pacing strategy.
+Generates standard-distance finish projections (5K, 10K, Half Marathon, Marathon) with localized pace variation offsets (`[-10, -5, 0, 5, 10]` seconds) for race pacing strategy.
 
 ---
 

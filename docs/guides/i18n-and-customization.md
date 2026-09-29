@@ -99,17 +99,17 @@ import { registerLocale, solvePace } from '@slow-bloom/runner-tools';
 // 1. Register a French locale or override specific fields
 // Omitted fields automatically fall back to the English baseline
 registerLocale('fr', {
-  common: {
-    hours: 'h',
-    minutes: 'min',
-    seconds: 's',
-  },
   pace: {
     units: {
       km: 'km',
       mi: 'mi',
       minPerKm: 'min/km',
       minPerMi: 'min/mi',
+    },
+    labels: {
+      pace: 'Allure',
+      distance: 'Distance',
+      time: 'Temps',
     },
   },
 });
@@ -127,11 +127,11 @@ const result = solvePace({
 ## Locale Schema Reference
 
 A complete `RunnerToolsLocale` structure covers:
-- `common`: Time units, ordinal suffixes
-- `vdot`: Training zone names (`E`, `M`, `T`, `I`, `R`) and descriptions
-- `racePredictor`: Standard distance labels (5K, 10K, Half, Full)
-- `heartRateZones`: Zone labels and descriptions across methods
-- `ageGrading`: Master performance tiers (`worldClass`, `nationalClass`, etc.)
-- `runningEfficiency`: Ratings (`elite`, `good`, `average`) and metric notes
-- `pace`: Unit labels and split headers
-- `weeklyMileage`: Status tags (`base`, `build`, `deload`, `targetReached`), unit labels, and timeline strings
+- `locale`: Language identifier tag (e.g. `'en'`, `'zh'`)
+- `vdot`: Training zone names (`E`, `M`, `T`, `I`, `R`), descriptions, distance labels, and unit strings
+- `racePredictor`: Standard distance labels (5K, 10K, Half, Full) and fatigue exponent descriptions
+- `heartRateZones`: Zone labels, category names, method descriptions, and percentage basis strings
+- `ageGrading`: Master performance tiers (`worldClass`, `nationalClass`, etc.) and validation error messages
+- `runningEfficiency`: Vertical Ratio tiers, Duty Factor tiers, Efficiency Factor ratings, and speed unit labels
+- `pace`: Unit labels (`minPerKm`, `minPerMi`, `kmPerHour`, `milesPerHour`, `metersPerSec`, `km`, `mi`), field labels, and standard distance labels
+- `weeklyMileage`: Status tags (`base`, `build`, `deload`, `target`), unit labels (`km`, `mi`), and timeline summary labels (`week`, `weeks`, etc.)

@@ -142,6 +142,22 @@ describe('Pace Solver', () => {
     expect(solved!.distance).toBe(0.01);
   });
 
+  it('preserves valid supplied distances and accepts boundary pace calculations', () => {
+    // 1.01 - 1 produces 0.010000000000000009 in IEEE-754
+    const distance = 1.01 - 1;
+    const timeSeconds = distance * 3600;
+
+    const pace = calculatePace(distance, timeSeconds);
+    expect(pace).not.toBeNull();
+    expect(pace).toBeLessThanOrEqual(3600);
+    expect(pace).toBeGreaterThanOrEqual(60);
+
+    const solved = solvePace({ distance, timeSeconds });
+    expect(solved).not.toBeNull();
+    expect(solved!.solvedField).toBe('pace');
+    expect(solved!.paceSeconds).toBeLessThanOrEqual(3600);
+  });
+
   it('explicitly represents unsupported finish table offsets with null and em-dash without silent clamping', () => {
     // paceSeconds 60: offsets -10 and -5 would result in 50s and 55s (< 60s minimum)
     const res = solvePace({ distance: 5, paceSeconds: 60, unit: 'km' });

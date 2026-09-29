@@ -73,14 +73,28 @@ const DISTANCE_MIN = 0.01;
 const DISTANCE_MAX = 10000;
 const DISTANCE_EPS = 1e-9;
 
+const PACE_MIN = 60;
+const PACE_MAX = 3600;
+const PACE_EPS = 1e-9;
+
 function normalizeDistanceEndpoint(dist: number): number {
-  if (Math.abs(dist - DISTANCE_MIN) <= DISTANCE_EPS) return DISTANCE_MIN;
-  if (Math.abs(dist - DISTANCE_MAX) <= DISTANCE_EPS) return DISTANCE_MAX;
+  if (dist < DISTANCE_MIN && dist >= DISTANCE_MIN - DISTANCE_EPS) return DISTANCE_MIN;
+  if (dist > DISTANCE_MAX && dist <= DISTANCE_MAX + DISTANCE_EPS) return DISTANCE_MAX;
   return dist;
 }
 
 function isValidDistance(dist: number): boolean {
   return Number.isFinite(dist) && dist >= DISTANCE_MIN - DISTANCE_EPS && dist <= DISTANCE_MAX + DISTANCE_EPS;
+}
+
+function normalizePaceEndpoint(pace: number): number {
+  if (pace < PACE_MIN && pace >= PACE_MIN - PACE_EPS) return PACE_MIN;
+  if (pace > PACE_MAX && pace <= PACE_MAX + PACE_EPS) return PACE_MAX;
+  return pace;
+}
+
+function isValidPace(pace: number): boolean {
+  return Number.isFinite(pace) && pace >= PACE_MIN - PACE_EPS && pace <= PACE_MAX + PACE_EPS;
 }
 
 /**
@@ -96,10 +110,10 @@ export function calculatePace(distance: number, timeSeconds: number): number | n
     return null;
   }
   const normDist = normalizeDistanceEndpoint(distance);
-  const pace = timeSeconds / normDist;
+  const rawPace = timeSeconds / normDist;
   // Reasonable physiological running boundaries: 60 s/unit (sprint) to 3600 s/unit (slow walk)
-  if (pace < 60 || pace > 3600) return null;
-  return pace;
+  if (!isValidPace(rawPace)) return null;
+  return normalizePaceEndpoint(rawPace);
 }
 
 /**
@@ -110,13 +124,13 @@ export function calculateTime(distance: number, paceSeconds: number): number | n
     !Number.isFinite(distance) ||
     !isValidDistance(distance) ||
     !Number.isFinite(paceSeconds) ||
-    paceSeconds <= 0
+    !isValidPace(paceSeconds)
   ) {
     return null;
   }
-  if (paceSeconds < 60 || paceSeconds > 3600) return null;
   const normDist = normalizeDistanceEndpoint(distance);
-  const time = normDist * paceSeconds;
+  const normPace = normalizePaceEndpoint(paceSeconds);
+  const time = normDist * normPace;
   return Number.isFinite(time) && time > 0 ? time : null;
 }
 
@@ -128,12 +142,12 @@ export function calculateDistance(timeSeconds: number, paceSeconds: number): num
     !Number.isFinite(timeSeconds) ||
     timeSeconds <= 0 ||
     !Number.isFinite(paceSeconds) ||
-    paceSeconds <= 0
+    !isValidPace(paceSeconds)
   ) {
     return null;
   }
-  if (paceSeconds < 60 || paceSeconds > 3600) return null;
-  const dist = timeSeconds / paceSeconds;
+  const normPace = normalizePaceEndpoint(paceSeconds);
+  const dist = timeSeconds / normPace;
   if (!isValidDistance(dist)) return null;
   return normalizeDistanceEndpoint(dist);
 }
@@ -159,9 +173,10 @@ export function convertPace(
     paceKmSecs = 1000 / params.speedMs!;
   }
 
-  if (paceKmSecs === null || paceKmSecs < 60 || paceKmSecs > 3600) {
+  if (paceKmSecs === null || !isValidPace(paceKmSecs)) {
     return null;
   }
+  paceKmSecs = normalizePaceEndpoint(paceKmSecs);
 
   const paceMiSecs = paceKmSecs * KM_PER_MILE;
   const speedKmh = 3600 / paceKmSecs;
@@ -226,7 +241,7 @@ export function solvePace(params: PaceSolverParams): PaceSolverResult | null {
   }
 
   if (isDefined(paceSeconds)) {
-    if (!Number.isFinite(paceSeconds) || paceSeconds! < 60 || paceSeconds! > 3600) {
+    if (!Number.isFinite(paceSeconds) || !isValidPace(paceSeconds!)) {
       return null;
     }
   }
@@ -244,31 +259,35 @@ export function solvePace(params: PaceSolverParams): PaceSolverResult | null {
 
   if (!isDefined(distance)) {
     solvedField = 'distance';
-    const dist = calculateDistance(timeSeconds!, paceSeconds!);
+    const normPace = normalizePaceEndpoint(paceSeconds!);
+    const dist = calculateDistance(timeSeconds!, normPace);
     if (dist === null) return null;
     finalDist = dist;
-    finalPace = paceSeconds!;
+    finalPace = normPace;
     finalTime = timeSeconds!;
   } else if (!isDefined(paceSeconds)) {
     solvedField = 'pace';
     const normDist = normalizeDistanceEndpoint(distance!);
     const pace = calculatePace(normDist, timeSeconds!);
-    if (pace === null || pace < 60 || pace > 3600) return null;
+    if (pace === null || !isValidPace(pace)) return null;
     finalDist = normDist;
-    finalPace = pace;
+    finalPace = normalizePaceEndpoint(pace);
     finalTime = timeSeconds!;
   } else {
     solvedField = 'time';
     const normDist = normalizeDistanceEndpoint(distance!);
-    const time = calculateTime(normDist, paceSeconds!);
+    const normPace = normalizePaceEndpoint(paceSeconds!);
+    const time = calculateTime(normDist, normPace);
     if (time === null) return null;
     finalDist = normDist;
-    finalPace = paceSeconds!;
+    finalPace = normPace;
     finalTime = time;
   }
 
   if (!isValidDistance(finalDist)) return null;
   finalDist = normalizeDistanceEndpoint(finalDist);
+  if (!isValidPace(finalPace)) return null;
+  finalPace = normalizePaceEndpoint(finalPace);
 
   const isKm = unit === 'km';
   const loc = getLocale(lang);
@@ -296,7 +315,7 @@ export function solvePace(params: PaceSolverParams): PaceSolverResult | null {
     const times: PaceFinishTableTimeItem[] = offsets.map((off) => {
       const paceSecs = finalPace + off;
       // Do not silently clamp unsupported offsets; represent them explicitly with null and '—'
-      if (paceSecs < 60 || paceSecs > 3600) {
+      if (!isValidPace(paceSecs)) {
         return {
           offsetSecs: off,
           paceSecs: null,
@@ -304,10 +323,11 @@ export function solvePace(params: PaceSolverParams): PaceSolverResult | null {
           timeFormatted: '—',
         };
       }
-      const totalSecs = Math.round(paceSecs * distInUnit);
+      const normPaceSecs = normalizePaceEndpoint(paceSecs);
+      const totalSecs = Math.round(normPaceSecs * distInUnit);
       return {
         offsetSecs: off,
-        paceSecs,
+        paceSecs: normPaceSecs,
         timeSeconds: totalSecs,
         timeFormatted: formatTime(totalSecs),
       };
