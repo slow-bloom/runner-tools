@@ -7,7 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.0] - 2026-09-29
+
+### Added
+- **Track & Activity File Processing (`files`)**:
+  - Zero-dependency universal XML and CSV parsers for **GPX 1.1**, **Garmin TCX 2.0**, **Google Earth KML**, and **CSV**.
+  - Multi-format exporters: `serializeToGPX`, `serializeToTCX`, `serializeToKML`, `toGeoJSON`, `serializeToGeoJSON`, and `serializeToCSV`.
+  - Comprehensive trackpoint extraction preserving heart rate, cadence, temperature, speed, power, altitude, and cumulative distance.
+  - Geographic & sensor data manipulation:
+    - Great-Circle Haversine distance calculator.
+    - Moving time estimation filtering pauses and standstills.
+    - Moving-average elevation gain & descent filter eliminating GPS altitude jitter.
+    - Start & end distance cropping with zero-offset distance rebasing (`cropTrack`).
+    - Privacy-protecting GPS coordinate stripping (`stripTrackGPS`).
+    - Multi-file chronological activity merging (`mergeActivities`).
+
 ## [0.1.0] - 2026-09-28
+
 
 ### Added
 - **VDOT & Training Paces Engine (`vdot`)**: Full implementation of Jack Daniels & Gilbert equations for oxygen consumption ($VO_2$) and fractional utilization ($p(t)$), solving VDOT scores, physiological training zones (E, M, T, I, R), and race equivalent times.

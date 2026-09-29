@@ -1,6 +1,6 @@
 {
   "name": "@slow-bloom/runner-tools",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Pure client-side exercise science algorithms, running pace formulas, and track utilities.",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -47,7 +47,12 @@
     "typescript",
     "runner",
     "garmin",
-    "apple-watch"
+    "apple-watch",
+    "gpx",
+    "tcx",
+    "kml",
+    "geojson",
+    "track-converter"
   ],
   "author": "Slowbloom Studio <chenhaomm@sina.com>",
   "license": "MIT",

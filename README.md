@@ -17,8 +17,9 @@ Experience these algorithms live in action on the web:
 - **[Age-Grading Calculator](https://apexrun.fit/tools/age-grading-calculator/)**
 - **[Running Efficiency Calculator](https://apexrun.fit/tools/running-efficiency-calculator/)**
 - **[Pace & Split Calculator](https://apexrun.fit/tools/pace-calculator/)**
-- **[Pace & Speed Converter](https://apexrun.fit/tools/pace-converter/)**
+- **[Running Track File Converter](https://apexrun.fit/tools/running-file-converter/)**
 - **[Weekly Mileage Ramp-Up Calculator](https://apexrun.fit/tools/weekly-mileage-calculator/)**
+
 
 ---
 
@@ -83,6 +84,11 @@ console.log('Zone 2:', hr?.zones[1].bpmFormatted); // "137 - 150 bpm"
 // 4. Solve pace from distance and duration
 const pace = solvePace({ distance: 10, timeSeconds: 2700, unit: 'km' });
 console.log('Pace:', pace?.paceFormatted); // "4'30\""
+
+// 5. Parse GPX and export as Garmin TCX
+const activity = parseGPX(gpxContent);
+const tcxContent = serializeToTCX(activity);
+
 ```
 
 ---
@@ -100,6 +106,7 @@ Detailed mathematical derivations, physiological domains, and complete API speci
 | **`running-efficiency`** | Formula | Vertical Ratio (VR), Duty Factor (DF), and Aerobic Efficiency Factor (EF) | [docs/formulas/running-efficiency.md](./docs/formulas/running-efficiency.md) |
 | **`pace`** | Formula | 3-way pace/time/distance solver, unit conversions & split tables | [docs/formulas/pace.md](./docs/formulas/pace.md) |
 | **`weekly-mileage`** | Formula | 10% progression rule, ACWR recovery periodization & deload cycles | [docs/formulas/weekly-mileage.md](./docs/formulas/weekly-mileage.md) |
+| **`files`** | Tool | GPX, TCX, KML, GeoJSON, CSV track parsing, cropping, GPS stripping & serialization | [docs/files/running-file-converter.md](./docs/files/running-file-converter.md) |
 | **`i18n`** | Guide | Custom dictionaries, locale registration, and fallback resolution | [docs/guides/i18n-and-customization.md](./docs/guides/i18n-and-customization.md) |
 
 ---
