@@ -390,13 +390,16 @@ export function calculateActivitySummary(
       const c = points[i].cad;
       if (c !== null && c !== undefined && Number.isFinite(c) && c > 0) {
         const fullCad = c < 120 ? c * 2 : c;
-        cadSum += fullCad;
+        cadSum += c;
         cadCount++;
         if (fullCad > cadMax) cadMax = fullCad;
       }
     }
     if (cadCount > 0) {
-      if (avgCad === null) avgCad = Math.round(cadSum / cadCount);
+      if (avgCad === null) {
+        const meanCad = cadSum / cadCount;
+        avgCad = Math.round(meanCad < 120 ? meanCad * 2 : meanCad);
+      }
       if (maxCad === null) maxCad = cadMax;
     }
   }

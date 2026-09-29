@@ -14,6 +14,8 @@ Zero-dependency, high-fidelity GPS trackpoint parsing, normalization, transforma
 | **GeoJSON (RFC 7946)** | — | `toGeoJSON`, `serializeToGeoJSON` | FeatureCollection `LineString`, property arrays for timestamps, heart rates, cadences, elevations, distances |
 | **CSV** | `parseCSV` | `serializeToCSV` | Columns: `Timestamp`, `Latitude`, `Longitude`, `Elevation(m)`, `Distance(m)`, `HeartRate(bpm)`, `Cadence(spm)`, `Speed(m/s)`, `Power(w)` |
 
+Cadence summaries retain the existing single-leg normalization heuristic: valid positive samples are averaged first, and means below 120 are doubled before rounding to steps per minute. Individual samples are not doubled before averaging.
+
 ---
 
 ## Quickstart
@@ -99,6 +101,8 @@ const merged = mergeActivities([part1Activity, part2Activity], {
 });
 console.log(merged.summary.distance); // Seamless continuous cumulative distance
 ```
+
+When chronological sorting is enabled, each activity's points are ordered before its distance counter is normalized. Source distances are accumulated independently: nonzero initial counters are preserved, and GPS gaps between activities do not add exercise distance. Sorting overlapping recordings preserves each source's contribution; it does not deduplicate recordings. Input activities and their points are not modified.
 
 ### 5. Localization & Custom Titles
 

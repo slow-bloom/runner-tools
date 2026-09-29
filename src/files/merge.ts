@@ -11,6 +11,20 @@ export interface MergeActivitiesOptions {
   locale?: LocaleInput;
 }
 
+function sortTrackpointsChronologically<T extends Trackpoint>(points: T[]): T[] {
+  let lastValidTime: number | null = null;
+  return points
+    .map((point, originalIndex) => {
+      const time = point.time instanceof Date && !isNaN(point.time.getTime())
+        ? point.time.getTime()
+        : null;
+      if (time !== null) lastValidTime = time;
+      return { point, effectiveTime: time ?? lastValidTime ?? -1, originalIndex };
+    })
+    .sort((a, b) => a.effectiveTime - b.effectiveTime || a.originalIndex - b.originalIndex)
+    .map(({ point }) => point);
+}
+
 /**
  * Merge multiple Activity objects into a single continuous Activity.
  * Concatenates trackpoint streams, sorts chronologically with total ordering for undated points,
@@ -64,7 +78,12 @@ export function mergeActivities(
     return null;
   }
 
-  const sortedActivities = [...activities];
+  const sortedActivities = activities.map((activity) => ({
+    ...activity,
+    points: sortChronologically
+      ? sortTrackpointsChronologically(activity.points)
+      : activity.points,
+  }));
   if (sortChronologically) {
     sortedActivities.sort((a, b) => {
       const aTime = getFirstValidTime(a.points);
@@ -120,38 +139,35 @@ export function mergeActivities(
     };
   }
 
-  // 3. Concatenate points while retaining source-distance provenance
-  const combinedPoints: Trackpoint[] = [];
+  // Keep source-local increments attached to points when the merged chronology interleaves sources.
+  const combinedPoints: (Trackpoint & { distanceIncrement: number | null })[] = [];
+  let hasDistances = false;
   for (const act of sortedActivities) {
-    for (const pt of act.points) {
-      combinedPoints.push({ ...pt });
-    }
-  }
-
-  // 4. Stable chronological sort for points if internal sequence contains timestamp inversions
-  if (sortChronologically) {
-    // Assign an inferred or anchor time to undated points based on their adjacent neighbors
-    // so they are not moved to arbitrary positions that corrupt distance continuity.
-    let lastValidTime: number | null = null;
-    const indexed = combinedPoints.map((pt, originalIndex) => {
-      const t = pt.time instanceof Date && !isNaN(pt.time.getTime()) ? pt.time.getTime() : null;
-      if (t !== null) lastValidTime = t;
-      return { pt, effectiveTime: t ?? lastValidTime ?? -1, originalIndex };
-    });
-
-    indexed.sort((a, b) => {
-      if (a.effectiveTime !== b.effectiveTime) {
-        return a.effectiveTime - b.effectiveTime;
+    let previousDistance = 0;
+    for (const point of normalizeTrackDistances(act.points)) {
+      let distanceIncrement: number | null = null;
+      if (point.distance !== null && Number.isFinite(point.distance)) {
+        distanceIncrement = point.distance - previousDistance;
+        previousDistance = point.distance;
+        hasDistances = true;
       }
-      return a.originalIndex - b.originalIndex;
-    });
-
-    for (let i = 0; i < combinedPoints.length; i++) {
-      combinedPoints[i] = indexed[i].pt;
+      combinedPoints.push({ ...point, distanceIncrement });
     }
   }
 
-  const finalPoints = normalizeTrackDistances(combinedPoints);
+  const orderedPoints = sortChronologically
+    ? sortTrackpointsChronologically(combinedPoints)
+    : combinedPoints;
+  let cumulativeDistance = 0;
+  const finalPoints = orderedPoints.map(({ distanceIncrement, ...point }) => {
+    cumulativeDistance += distanceIncrement ?? 0;
+    return {
+      ...point,
+      distance: hasDistances
+        ? Math.round(cumulativeDistance * 100) / 100
+        : point.distance,
+    };
+  });
   const summary = calculateActivitySummary(finalPoints);
 
   return {
@@ -160,4 +176,3 @@ export function mergeActivities(
     summary,
   };
 }
-

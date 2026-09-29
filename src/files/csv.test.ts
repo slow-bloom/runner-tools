@@ -44,6 +44,15 @@ describe('CSV Parser & Serializer', () => {
     expect(parsed.points[1].power).toBe(250);
   });
 
+  it('preserves the average of mixed walking and running cadence samples', () => {
+    const csv = 'Timestamp,Cadence(spm)\n2026-03-01T08:00:00Z,90\n2026-03-01T08:00:10Z,170';
+
+    const parsed = parseCSV(csv);
+
+    expect(parsed.points.map((point) => point.cad)).toEqual([90, 170]);
+    expect(parsed.summary.avgCadence).toBe(130);
+  });
+
   it('correctly decodes quoted CSV fields without losing numeric or date values', () => {
     const quotedCsv = `Timestamp,Latitude,Longitude,Elevation(m),Distance(m),HeartRate(bpm),Cadence(spm),Speed(m/s),Power(w)
 "2026-03-01T08:00:00.000Z","39.900000","116.400000","50.00","0.0","140","175","3.20","240"

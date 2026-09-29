@@ -34,6 +34,89 @@ describe('Activity Merge', () => {
     expect(merged.summary.distance).toBe(2000);
   });
 
+  it.each([true, false])('preserves independent nonzero distance counters with sorting=%s', (sortChronologically) => {
+    const first: Activity = {
+      name: 'Part 1',
+      points: [
+        { lat: null, lon: null, ele: null, time: new Date('2026-03-01T08:00:00Z'), hr: null, cad: null, distance: 0 },
+        { lat: null, lon: null, ele: null, time: new Date('2026-03-01T08:00:10Z'), hr: null, cad: null, distance: 100 },
+      ],
+      summary: { ...calculateActivitySummary([]), distance: 100 },
+    };
+    const second: Activity = {
+      name: 'Part 2',
+      points: [
+        { lat: null, lon: null, ele: null, time: new Date('2026-03-01T08:00:20Z'), hr: null, cad: null, distance: 200 },
+        { lat: null, lon: null, ele: null, time: new Date('2026-03-01T08:00:30Z'), hr: null, cad: null, distance: 300 },
+      ],
+      summary: { ...calculateActivitySummary([]), distance: 300 },
+    };
+
+    const merged = mergeActivities([first, second], { sortChronologically });
+
+    expect(merged.points.map((point) => point.distance)).toEqual([0, 100, 300, 400]);
+    expect(merged.summary.distance).toBe(400);
+    expect(first.points.map((point) => point.distance)).toEqual([0, 100]);
+    expect(second.points.map((point) => point.distance)).toEqual([200, 300]);
+  });
+
+  it.each([true, false])('does not count GPS gaps between activities with sorting=%s', (sortChronologically) => {
+    const first: Activity = {
+      name: 'Part 1',
+      points: [
+        { lat: 0, lon: 0, ele: null, time: new Date('2026-03-01T08:00:00Z'), hr: null, cad: null, distance: null },
+        { lat: 0, lon: 0.001, ele: null, time: new Date('2026-03-01T08:00:10Z'), hr: null, cad: null, distance: null },
+      ],
+      summary: calculateActivitySummary([]),
+    };
+    const second: Activity = {
+      name: 'Part 2',
+      points: [
+        { lat: 0, lon: 1, ele: null, time: new Date('2026-03-01T08:00:20Z'), hr: null, cad: null, distance: null },
+        { lat: 0, lon: 1.001, ele: null, time: new Date('2026-03-01T08:00:30Z'), hr: null, cad: null, distance: null },
+      ],
+      summary: calculateActivitySummary([]),
+    };
+
+    const merged = mergeActivities([first, second], { sortChronologically });
+
+    expect(merged.points.map((point) => point.distance)).toEqual([0, 111.19, 111.19, 222.38]);
+    expect(merged.summary.distance).toBe(222.38);
+    expect(merged.summary.duration).toBe(20);
+    expect(first.points.every((point) => point.distance === null)).toBe(true);
+    expect(second.points.every((point) => point.distance === null)).toBe(true);
+  });
+
+  it('preserves each source distance when chronological sorting interleaves activities', () => {
+    const first: Activity = {
+      name: 'Part 1',
+      points: [
+        { lat: null, lon: null, ele: null, time: new Date('2026-03-01T08:00:00Z'), hr: null, cad: null, distance: 0 },
+        { lat: null, lon: null, ele: null, time: new Date('2026-03-01T08:00:10Z'), hr: null, cad: null, distance: 100 },
+      ],
+      summary: { ...calculateActivitySummary([]), distance: 100 },
+    };
+    const second: Activity = {
+      name: 'Part 2',
+      points: [
+        { lat: null, lon: null, ele: null, time: new Date('2026-03-01T08:00:05Z'), hr: null, cad: null, distance: 0 },
+        { lat: null, lon: null, ele: null, time: new Date('2026-03-01T08:00:15Z'), hr: null, cad: null, distance: 100 },
+      ],
+      summary: { ...calculateActivitySummary([]), distance: 100 },
+    };
+
+    const merged = mergeActivities([first, second]);
+
+    expect(merged.points.map((point) => point.distance)).toEqual([0, 0, 100, 200]);
+    expect(merged.points.map((point) => point.time?.toISOString())).toEqual([
+      '2026-03-01T08:00:00.000Z',
+      '2026-03-01T08:00:05.000Z',
+      '2026-03-01T08:00:10.000Z',
+      '2026-03-01T08:00:15.000Z',
+    ]);
+    expect(merged.summary.distance).toBe(200);
+  });
+
   it('handles empty input gracefully and supports localized titles', () => {
     const mergedDefault = mergeActivities([]);
     expect(mergedDefault.points).toHaveLength(0);
