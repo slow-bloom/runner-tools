@@ -1,23 +1,29 @@
-import type { Activity, Trackpoint, GPXExportOptions } from './types.js';
+import type { Activity, Trackpoint, GPXExportOptions, ParseTrackOptions } from './types.js';
 import {
   extractAllTags,
   extractAttribute,
   getXmlChildTagValue,
   escapeXml,
+  safeIsoTimestamp,
 } from './xml-utils.js';
 import { normalizeTrackDistances, calculateActivitySummary } from './geo.js';
+import { getLocale } from '../i18n/index.js';
 
 /**
  * Parse standard GPX 1.1 or 1.0 XML string into an Activity object.
  * Extracts GPS coordinates, altitude, timestamp, heart rate, cadence, and temperature.
  *
  * @param xmlText GPX XML string content
+ * @param options Optional parser options such as locale override
  * @returns Fully populated Activity data structure
  */
-export function parseGPX(xmlText: string): Activity {
+export function parseGPX(xmlText: string, options?: ParseTrackOptions): Activity {
+  const loc = getLocale(options?.locale);
+  const defaultName = loc.files.defaultActivityName;
+
   if (!xmlText || typeof xmlText !== 'string') {
     return {
-      name: 'Activity',
+      name: defaultName,
       points: [],
       summary: calculateActivitySummary([]),
     };
@@ -25,7 +31,7 @@ export function parseGPX(xmlText: string): Activity {
 
   // Extract activity name
   const rawName = getXmlChildTagValue(xmlText, 'name');
-  const name = rawName ? rawName.trim() : 'Activity';
+  const name = rawName ? rawName.trim() : defaultName;
 
   const trkptMatches = extractAllTags(xmlText, 'trkpt');
   const rawPoints: Trackpoint[] = [];
@@ -113,17 +119,15 @@ export function serializeToGPX(
   options?: GPXExportOptions
 ): string {
   const points = Array.isArray(activityOrPoints) ? activityOrPoints : activityOrPoints.points;
+  const loc = getLocale(options?.locale);
+  const defaultName = loc.files.defaultActivityName;
   const activityName =
     options?.name ||
-    (!Array.isArray(activityOrPoints) ? activityOrPoints.name : 'Activity') ||
-    'Activity';
+    (!Array.isArray(activityOrPoints) && activityOrPoints.name ? activityOrPoints.name : defaultName);
   const creator = options?.creator || 'ApexRun';
   const includeExtensions = options?.includeExtensions ?? true;
 
-  const startTimeIso =
-    points[0]?.time instanceof Date
-      ? points[0].time.toISOString()
-      : new Date().toISOString();
+  const startTimeIso = safeIsoTimestamp(points[0]?.time);
 
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="${escapeXml(creator)}" xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd http://www.garmin.com/xmlschemas/TrackPointExtension/v1 http://www.garmin.com/xmlschemas/TrackPointExtensionv1.xsd">

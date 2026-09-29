@@ -3,6 +3,8 @@
  * Compatible with GPX 1.1, Garmin TCX 2.0, Google Earth KML, and GeoJSON.
  */
 
+import type { LocaleInput } from '../i18n/index.js';
+
 export interface LatLon {
   lat: number;
   lon: number;
@@ -77,22 +79,31 @@ export interface Activity {
   summary: ActivitySummary;
 }
 
+export interface ParseTrackOptions {
+  /** Optional language or custom dictionary override for generated activity titles. */
+  locale?: LocaleInput;
+}
+
 export interface GPXExportOptions {
-  /** Name of the activity track in GPX output. Defaults to activity name or "Activity". */
+  /** Name of the activity track in GPX output. Defaults to activity name or localized default. */
   name?: string;
   /** Creator attribute in <gpx creator="...">. Defaults to "ApexRun". */
   creator?: string;
   /** Include Garmin TrackPointExtension (gpxtpx) for HR and Cadence. Defaults to true. */
   includeExtensions?: boolean;
+  /** Optional language or custom dictionary override. */
+  locale?: LocaleInput;
 }
 
 export interface TCXExportOptions {
-  /** Name of the activity track in TCX output. Defaults to activity name or "Activity". */
+  /** Name of the activity track in TCX output. Defaults to activity name or localized default. */
   name?: string;
   /** Creator name in TCX output. Defaults to "ApexRun". */
   creator?: string;
   /** Sport category in <Activity Sport="...">. Defaults to "Running". */
   sport?: string;
+  /** Optional language or custom dictionary override. */
+  locale?: LocaleInput;
 }
 
 export interface KMLExportOptions {
@@ -102,6 +113,8 @@ export interface KMLExportOptions {
   lineColor?: string;
   /** Track line stroke width in pixels. Defaults to 4. */
   lineWidth?: number;
+  /** Optional language or custom dictionary override. */
+  locale?: LocaleInput;
 }
 
 export interface GeoJSONFeatureCollection {
@@ -129,4 +142,7 @@ export interface GeoJSONExportOptions {
   name?: string;
   /** Include elevation coordinate as 3rd coordinate tuple [lon, lat, ele]. Defaults to true. */
   includeElevationInCoordinates?: boolean;
+  /** Optional language or custom dictionary override. */
+  locale?: LocaleInput;
 }
+

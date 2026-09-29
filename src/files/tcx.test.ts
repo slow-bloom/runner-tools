@@ -84,4 +84,50 @@ describe('TCX Parser & Serializer', () => {
     expect(act.points).toHaveLength(0);
     expect(act.summary.distance).toBe(0);
   });
+
+  it('aggregates all laps in multi-lap TCX activities', () => {
+    const multiLapTcx = `<?xml version="1.0" encoding="UTF-8"?>
+<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
+  <Activities>
+    <Activity Sport="Running">
+      <Id>2026-03-01T07:00:00Z</Id>
+      <Lap StartTime="2026-03-01T07:00:00Z">
+        <TotalTimeSeconds>300.0</TotalTimeSeconds>
+        <DistanceMeters>1000.0</DistanceMeters>
+        <Cadence>180</Cadence>
+      </Lap>
+      <Lap StartTime="2026-03-01T07:05:00Z">
+        <TotalTimeSeconds>300.0</TotalTimeSeconds>
+        <DistanceMeters>1000.0</DistanceMeters>
+        <Cadence>184</Cadence>
+      </Lap>
+    </Activity>
+  </Activities>
+</TrainingCenterDatabase>`;
+
+    const act = parseTCX(multiLapTcx);
+    // Two 1000m / 300s laps must produce 2000m / 600s totals
+    expect(act.summary.distance).toBe(2000);
+    expect(act.summary.duration).toBe(600);
+    expect(act.summary.avgCadence).toBe(182);
+  });
+
+  it('emits mandatory schema elements (Calories, Intensity) and omits invalid Device_t creator', () => {
+    const points = [
+      { lat: 31.2, lon: 121.4, ele: 10, time: new Date('2026-03-01T07:00:00Z'), hr: 140, cad: 180, distance: 5000 },
+    ];
+    const xml = serializeToTCX(points);
+    expect(xml).toContain('<Calories>');
+    expect(xml).toContain('<Intensity>Active</Intensity>');
+    expect(xml).toContain('<TriggerMethod>Manual</TriggerMethod>');
+    // Must NOT contain invalid partial Device_t without UnitId/ProductID
+    expect(xml).not.toContain('<Creator xsi:type="Device_t">');
+  });
+
+  it('safely serializes with invalid Date(NaN) timestamps without throwing RangeError', () => {
+    const points = [
+      { lat: 31.2, lon: 121.4, ele: 10, time: new Date(NaN), hr: 140, cad: 180, distance: 0 },
+    ];
+    expect(() => serializeToTCX(points)).not.toThrow();
+  });
 });

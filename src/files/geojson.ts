@@ -1,4 +1,5 @@
 import type { Activity, Trackpoint, GeoJSONFeatureCollection, GeoJSONExportOptions } from './types.js';
+import { getLocale } from '../i18n/index.js';
 
 /**
  * Convert Activity or Trackpoint array into a standardized GeoJSON FeatureCollection.
@@ -12,11 +13,12 @@ export function toGeoJSON(
   activityOrPoints: Activity | Trackpoint[],
   options?: GeoJSONExportOptions
 ): GeoJSONFeatureCollection {
+  const loc = getLocale(options?.locale);
+  const defaultName = loc.files.defaultActivityName;
   const points = Array.isArray(activityOrPoints) ? activityOrPoints : activityOrPoints.points;
   const name =
     options?.name ||
-    (!Array.isArray(activityOrPoints) ? activityOrPoints.name : 'ApexRun Route') ||
-    'ApexRun Route';
+    (!Array.isArray(activityOrPoints) && activityOrPoints.name ? activityOrPoints.name : defaultName);
   const includeElevation = options?.includeElevationInCoordinates ?? true;
 
   const coordinates: Array<[number, number] | [number, number, number]> = [];

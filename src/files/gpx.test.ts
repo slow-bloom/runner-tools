@@ -84,4 +84,40 @@ describe('GPX Parser & Serializer', () => {
     const malformed = parseGPX('<gpx><trk><trkseg><trkpt lat="invalid" lon="116.39"></trkpt></trkseg></trk></gpx>');
     expect(malformed.points).toHaveLength(0);
   });
+
+  it('correctly parses self-closing <trkpt .../> elements without point loss', () => {
+    const xmlWithSelfClosing = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Test">
+  <trk>
+    <name>Self Closing Track</name>
+    <trkseg>
+      <trkpt lat="39.908700" lon="116.397500" />
+      <trkpt lat="39.910000" lon="116.398000"><ele>50.0</ele></trkpt>
+      <trkpt lat="39.912000" lon="116.399000" />
+    </trkseg>
+  </trk>
+</gpx>`;
+    const activity = parseGPX(xmlWithSelfClosing);
+    expect(activity.points).toHaveLength(3);
+    expect(activity.points[0].lat).toBeCloseTo(39.9087, 4);
+    expect(activity.points[1].ele).toBe(50.0);
+    expect(activity.points[2].lat).toBeCloseTo(39.912, 4);
+  });
+
+  it('safely serializes trackpoints with invalid Date(NaN) timestamps without RangeError', () => {
+    const points = [
+      { lat: 39.9, lon: 116.4, ele: 10, time: new Date(NaN), hr: 140, cad: 180, distance: 0 },
+    ];
+    expect(() => serializeToGPX(points)).not.toThrow();
+    const xml = serializeToGPX(points);
+    expect(xml).toContain('<trkpt lat="39.900000" lon="116.400000">');
+  });
+
+  it('resolves generated default title through localization', () => {
+    const emptyZh = parseGPX('', { locale: 'zh' });
+    expect(emptyZh.name).toBe('运动记录');
+
+    const serializedZh = serializeToGPX([{ lat: 39.9, lon: 116.4, ele: 0, time: null, hr: null, cad: null, distance: 0 }], { locale: 'zh' });
+    expect(serializedZh).toContain('<name>运动记录</name>');
+  });
 });

@@ -1,25 +1,30 @@
-import type { Activity, Trackpoint, KMLExportOptions } from './types.js';
+import type { Activity, Trackpoint, KMLExportOptions, ParseTrackOptions } from './types.js';
 import { extractAllTags, getXmlChildTagValue, escapeXml } from './xml-utils.js';
 import { normalizeTrackDistances, calculateActivitySummary } from './geo.js';
+import { getLocale } from '../i18n/index.js';
 
 /**
  * Parse Google Earth KML format into an Activity object.
  * Parses <coordinates> blocks with lon,lat,elevation tuples.
  *
  * @param xmlText KML XML string
+ * @param options Optional parser options such as locale override
  * @returns Activity object
  */
-export function parseKML(xmlText: string): Activity {
+export function parseKML(xmlText: string, options?: ParseTrackOptions): Activity {
+  const loc = getLocale(options?.locale);
+  const defaultName = loc.files.defaultActivityName;
+
   if (!xmlText || typeof xmlText !== 'string') {
     return {
-      name: 'Activity',
+      name: defaultName,
       points: [],
       summary: calculateActivitySummary([]),
     };
   }
 
   const nameVal = getXmlChildTagValue(xmlText, 'name');
-  const name = nameVal ? nameVal.trim() : 'Activity';
+  const name = nameVal ? nameVal.trim() : defaultName;
 
   const coordMatches = extractAllTags(xmlText, 'coordinates');
   const rawPoints: Trackpoint[] = [];
@@ -73,10 +78,11 @@ export function serializeToKML(
   options?: KMLExportOptions
 ): string {
   const points = Array.isArray(activityOrPoints) ? activityOrPoints : activityOrPoints.points;
+  const loc = getLocale(options?.locale);
+  const defaultName = loc.files.defaultActivityName;
   const name =
     options?.name ||
-    (!Array.isArray(activityOrPoints) ? activityOrPoints.name : 'Activity') ||
-    'ApexRun Route';
+    (!Array.isArray(activityOrPoints) && activityOrPoints.name ? activityOrPoints.name : defaultName);
   const lineColor = options?.lineColor || 'ff045de8';
   const lineWidth = options?.lineWidth ?? 4;
 

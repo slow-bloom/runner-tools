@@ -55,6 +55,17 @@ describe('Geographic & Track Utilities', () => {
       expect(calculateMovingTime(points)).toBe(10);
     });
 
+    it('excludes standstills with measured zero movement rather than falling back to elapsed time', () => {
+      const t0 = new Date('2026-03-01T08:00:00Z');
+      // 10 seconds of stationary standstill with recorded coordinates and distance
+      const points: Trackpoint[] = [
+        { lat: 39.9, lon: 116.4, ele: 50, time: t0, hr: 80, cad: 0, distance: 0, speed: 0 },
+        { lat: 39.9, lon: 116.4, ele: 50, time: new Date(t0.getTime() + 10000), hr: 80, cad: 0, distance: 0, speed: 0 },
+      ];
+      // Standstill must be 0s, NOT elapsed 10s
+      expect(calculateMovingTime(points)).toBe(0);
+    });
+
     it('returns 0 for empty or single point streams', () => {
       expect(calculateMovingTime([])).toBe(0);
       expect(calculateMovingTime([{ lat: 0, lon: 0, ele: 0, time: new Date(), hr: null, cad: null, distance: 0 }])).toBe(0);

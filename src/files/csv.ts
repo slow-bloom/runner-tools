@@ -1,8 +1,39 @@
-import type { Activity, Trackpoint } from './types.js';
+import type { Activity, Trackpoint, ParseTrackOptions } from './types.js';
 import { normalizeTrackDistances, calculateActivitySummary } from './geo.js';
+import { getLocale } from '../i18n/index.js';
+
 
 export const CSV_HEADER =
   'Timestamp,Latitude,Longitude,Elevation(m),Distance(m),HeartRate(bpm),Cadence(spm),Speed(m/s),Power(w)';
+
+/**
+ * Robust RFC 4180 compliant CSV line parser.
+ * Handles quoted fields, embedded commas, and escaped double quotes ("").
+ */
+export function parseCsvLine(line: string): string[] {
+  const fields: string[] = [];
+  let current = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++; // skip escaped quote
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      fields.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  fields.push(current.trim());
+  return fields;
+}
 
 /**
  * Serialize an Activity or array of Trackpoints into standard CSV format.
@@ -37,14 +68,19 @@ export function serializeToCSV(activityOrPoints: Activity | Trackpoint[]): strin
 
 /**
  * Parse standard runner CSV text into an Activity object.
+ * Supports quoted fields, ISO timestamps, and custom language dictionaries.
  *
  * @param csvText CSV string with header
+ * @param options Optional parser options such as locale override
  * @returns Activity object
  */
-export function parseCSV(csvText: string): Activity {
+export function parseCSV(csvText: string, options?: ParseTrackOptions): Activity {
+  const loc = getLocale(options?.locale);
+  const defaultName = loc.files.defaultActivityName;
+
   if (!csvText || typeof csvText !== 'string') {
     return {
-      name: 'Activity',
+      name: defaultName,
       points: [],
       summary: calculateActivitySummary([]),
     };
@@ -53,14 +89,14 @@ export function parseCSV(csvText: string): Activity {
   const lines = csvText.trim().split(/\r?\n/);
   if (lines.length <= 1) {
     return {
-      name: 'Activity',
+      name: defaultName,
       points: [],
       summary: calculateActivitySummary([]),
     };
   }
 
   const headerLine = lines[0].toLowerCase();
-  const headers = headerLine.split(',').map((h) => h.trim());
+  const headers = parseCsvLine(headerLine);
 
   const idxTime = headers.findIndex((h) => h.includes('time'));
   const idxLat = headers.findIndex((h) => h.includes('lat'));
@@ -78,7 +114,7 @@ export function parseCSV(csvText: string): Activity {
     const line = lines[i].trim();
     if (!line) continue;
 
-    const cols = line.split(',');
+    const cols = parseCsvLine(line);
 
     let time: Date | null = null;
     if (idxTime >= 0 && cols[idxTime]) {

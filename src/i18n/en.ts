@@ -59,8 +59,15 @@ export interface RunningEfficiencyI18n {
   };
 }
 
+export interface FilesI18n {
+  defaultActivityName: string;
+  emptyActivityName: string;
+  mergedActivitySuffix: string;
+}
+
 export interface RunnerToolsLocale {
   locale: string;
+  files: FilesI18n;
   vdot: {
     zones: {
       E: VDOTZoneI18n;
@@ -164,6 +171,11 @@ export interface RunnerToolsLocale {
 
 export const enLocale: RunnerToolsLocale = {
   locale: 'en',
+  files: {
+    defaultActivityName: 'Activity',
+    emptyActivityName: 'Empty Activity',
+    mergedActivitySuffix: ' (Merged)',
+  },
   vdot: {
     zones: {
       E: {

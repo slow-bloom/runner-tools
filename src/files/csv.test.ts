@@ -43,4 +43,19 @@ describe('CSV Parser & Serializer', () => {
     expect(parsed.points[1].cad).toBe(178);
     expect(parsed.points[1].power).toBe(250);
   });
+
+  it('correctly decodes quoted CSV fields without losing numeric or date values', () => {
+    const quotedCsv = `Timestamp,Latitude,Longitude,Elevation(m),Distance(m),HeartRate(bpm),Cadence(spm),Speed(m/s),Power(w)
+"2026-03-01T08:00:00.000Z","39.900000","116.400000","50.00","0.0","140","175","3.20","240"
+"2026-03-01T08:00:10.000Z","39.900300","116.400300","50.50","35.0","144","178","3.50","250"`;
+
+    const parsed = parseCSV(quotedCsv);
+    expect(parsed.points).toHaveLength(2);
+    expect(parsed.points[0].lat).toBeCloseTo(39.9, 4);
+    expect(parsed.points[0].lon).toBeCloseTo(116.4, 4);
+    expect(parsed.points[0].ele).toBe(50.0);
+    expect(parsed.points[0].hr).toBe(140);
+    expect(parsed.points[0].cad).toBe(175);
+    expect(parsed.points[0].time?.toISOString()).toBe('2026-03-01T08:00:00.000Z');
+  });
 });

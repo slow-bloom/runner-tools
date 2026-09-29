@@ -1,22 +1,28 @@
-import type { Activity, Trackpoint, TCXExportOptions, ActivitySummary } from './types.js';
+import type { Activity, Trackpoint, TCXExportOptions, ActivitySummary, ParseTrackOptions } from './types.js';
 import {
   extractAllTags,
   getXmlChildTagValue,
   escapeXml,
+  safeIsoTimestamp,
 } from './xml-utils.js';
 import { normalizeTrackDistances, calculateActivitySummary } from './geo.js';
+import { getLocale } from '../i18n/index.js';
 
 /**
  * Parse Garmin Training Center XML (TCX 2.0) format into an Activity object.
- * Extracts GPS positions, altitude, heart rate, cadence, distance, and lap summaries.
+ * Extracts GPS positions, altitude, heart rate, cadence, distance, and aggregates all lap summaries.
  *
  * @param xmlText TCX XML string
+ * @param options Optional parser options such as locale override
  * @returns Fully structured Activity
  */
-export function parseTCX(xmlText: string): Activity {
+export function parseTCX(xmlText: string, options?: ParseTrackOptions): Activity {
+  const loc = getLocale(options?.locale);
+  const defaultName = loc.files.defaultActivityName;
+
   if (!xmlText || typeof xmlText !== 'string') {
     return {
-      name: 'Activity',
+      name: defaultName,
       points: [],
       summary: calculateActivitySummary([]),
     };
@@ -26,22 +32,49 @@ export function parseTCX(xmlText: string): Activity {
   const sportMatch = xmlText.match(/<Activity\s+[^>]*Sport\s*=\s*(["'])(.*?)\1/i);
   const sport = sportMatch ? sportMatch[2].toLowerCase() : 'running';
 
-  // Check Lap summary if present
+  // Aggregate all Laps if present
   const lapMatches = extractAllTags(xmlText, 'Lap');
   let lapSummary: Partial<ActivitySummary> | undefined;
 
   if (lapMatches.length > 0) {
-    const lapXml = lapMatches[0].innerXml;
-    const distVal = getXmlChildTagValue(lapXml, 'DistanceMeters');
-    const timeVal = getXmlChildTagValue(lapXml, 'TotalTimeSeconds');
-    const cadVal = getXmlChildTagValue(lapXml, 'Cadence');
+    let totalDist = 0;
+    let totalTime = 0;
+    let cadWeightedSum = 0;
+    let cadTimeSum = 0;
+    let hasLapMetrics = false;
 
-    lapSummary = {
-      sport,
-      distance: distVal && Number.isFinite(parseFloat(distVal)) ? parseFloat(distVal) : undefined,
-      duration: timeVal && Number.isFinite(parseFloat(timeVal)) ? parseFloat(timeVal) : undefined,
-      avgCadence: cadVal && Number.isFinite(parseInt(cadVal, 10)) ? parseInt(cadVal, 10) : undefined,
-    };
+    for (const lap of lapMatches) {
+      const lapXml = lap.innerXml;
+      const distVal = getXmlChildTagValue(lapXml, 'DistanceMeters');
+      const timeVal = getXmlChildTagValue(lapXml, 'TotalTimeSeconds');
+      const cadVal = getXmlChildTagValue(lapXml, 'Cadence');
+
+      const d = distVal && Number.isFinite(parseFloat(distVal)) ? parseFloat(distVal) : 0;
+      const t = timeVal && Number.isFinite(parseFloat(timeVal)) ? parseFloat(timeVal) : 0;
+      const c = cadVal && Number.isFinite(parseInt(cadVal, 10)) ? parseInt(cadVal, 10) : null;
+
+      if (distVal !== null || timeVal !== null) {
+        hasLapMetrics = true;
+        totalDist += d;
+        totalTime += t;
+        if (c !== null && t > 0) {
+          cadWeightedSum += c * t;
+          cadTimeSum += t;
+        } else if (c !== null) {
+          cadWeightedSum += c;
+          cadTimeSum += 1;
+        }
+      }
+    }
+
+    if (hasLapMetrics) {
+      lapSummary = {
+        sport,
+        distance: totalDist,
+        duration: totalTime,
+        avgCadence: cadTimeSum > 0 ? Math.round(cadWeightedSum / cadTimeSum) : undefined,
+      };
+    }
   }
 
   const trkptMatches = extractAllTags(xmlText, 'Trackpoint');
@@ -137,16 +170,13 @@ export function serializeToTCX(
 ): string {
   const points = Array.isArray(activityOrPoints) ? activityOrPoints : activityOrPoints.points;
   const activitySummary = !Array.isArray(activityOrPoints) ? activityOrPoints.summary : calculateActivitySummary(points);
-  const creator = options?.creator || 'ApexRun';
   const sport = options?.sport || 'Running';
 
-  const startTimeIso =
-    points[0]?.time instanceof Date
-      ? points[0].time.toISOString()
-      : new Date().toISOString();
-
+  const startTimeIso = safeIsoTimestamp(points[0]?.time);
   const totalTimeSecs = activitySummary.duration || 0;
   const totalDistMeters = activitySummary.distance || 0;
+  // Estimate or clamp calories to valid unsignedShort (0 - 65535)
+  const calories = Math.min(65535, Math.max(0, Math.round(totalDistMeters * 0.06)));
 
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2 http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd">
@@ -156,6 +186,8 @@ export function serializeToTCX(
       <Lap StartTime="${startTimeIso}">
         <TotalTimeSeconds>${totalTimeSecs.toFixed(1)}</TotalTimeSeconds>
         <DistanceMeters>${totalDistMeters.toFixed(1)}</DistanceMeters>
+        <Calories>${calories}</Calories>
+        <Intensity>Active</Intensity>
         <TriggerMethod>Manual</TriggerMethod>
         <Track>`;
 
@@ -231,9 +263,6 @@ export function serializeToTCX(
   xml += `
         </Track>
       </Lap>
-      <Creator xsi:type="Device_t">
-        <Name>${escapeXml(creator)}</Name>
-      </Creator>
     </Activity>
   </Activities>
 </TrainingCenterDatabase>`;

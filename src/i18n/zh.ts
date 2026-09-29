@@ -2,6 +2,11 @@ import type { RunnerToolsLocale } from './en.js';
 
 export const zhLocale: RunnerToolsLocale = {
   locale: 'zh',
+  files: {
+    defaultActivityName: '运动记录',
+    emptyActivityName: '空活动',
+    mergedActivitySuffix: ' (合并)',
+  },
   vdot: {
     zones: {
       E: {

@@ -57,6 +57,7 @@ export function calculateMovingTime(points: Trackpoint[], options?: MovingTimeOp
   const minSpeed = options?.minSpeedMps ?? 0.22;
 
   let movingSecs = 0;
+  let hasMovementData = false;
 
   for (let i = 1; i < points.length; i++) {
     const prev = points[i - 1];
@@ -78,6 +79,7 @@ export function calculateMovingTime(points: Trackpoint[], options?: MovingTimeOp
           Number.isFinite(curr.distance) &&
           Number.isFinite(prev.distance)
         ) {
+          hasMovementData = true;
           speed = (curr.distance - prev.distance) / diff;
         } else if (
           prev.lat !== null &&
@@ -85,12 +87,15 @@ export function calculateMovingTime(points: Trackpoint[], options?: MovingTimeOp
           curr.lat !== null &&
           curr.lon !== null
         ) {
+          hasMovementData = true;
           const dist = haversineDistance(
             { lat: prev.lat, lon: prev.lon },
             { lat: curr.lat, lon: curr.lon }
           );
           speed = dist / diff;
         }
+      } else {
+        hasMovementData = true;
       }
 
       if (speed !== undefined && speed !== null && Number.isFinite(speed) && speed >= minSpeed) {
@@ -99,8 +104,10 @@ export function calculateMovingTime(points: Trackpoint[], options?: MovingTimeOp
     }
   }
 
-  // Fallback to elapsed time if movingSecs is 0 (e.g. no speed recorded or indoor treadmill without timestamps delta)
-  if (movingSecs === 0 && points[0].time && points[points.length - 1].time) {
+  // Only fallback to total elapsed time if movement data was completely unavailable
+  // (e.g. purely time-stamped points without GPS coordinates, recorded distance, or speed).
+  // If movement metrics were measured and the runner was standing still, return 0.
+  if (movingSecs === 0 && !hasMovementData && points[0].time && points[points.length - 1].time) {
     const elapsed =
       (points[points.length - 1].time!.getTime() - points[0].time!.getTime()) / 1000;
     if (elapsed > 0) return elapsed;

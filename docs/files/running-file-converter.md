@@ -100,6 +100,23 @@ const merged = mergeActivities([part1Activity, part2Activity], {
 console.log(merged.summary.distance); // Seamless continuous cumulative distance
 ```
 
+### 5. Localization & Custom Titles
+
+All parsers, exporters, and merge utilities accept an optional `locale` parameter (`string` tag or custom dictionary override). Generated fallback titles (e.g. `'Activity'`, `'Empty Activity'`, `' (Merged)'`) dynamically resolve via your configured locale:
+
+```ts
+import { parseGPX, mergeActivities } from '@slow-bloom/runner-tools';
+
+// Parse with Chinese localization: defaults to "运动记录" if <name> is missing
+const activityZh = parseGPX(gpxXmlWithoutName, { locale: 'zh' });
+console.log(activityZh.name); // "运动记录"
+
+// Merge with Chinese suffix
+const mergedZh = mergeActivities([part1, part2], { locale: 'zh' });
+console.log(mergedZh.name); // "晨跑 (合并)"
+```
+
+
 ---
 
 ## Core Types
