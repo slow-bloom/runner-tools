@@ -1,4 +1,5 @@
 import type { Activity, ParseTrackOptions } from './types.js';
+import type { AnalyzedTrack, TrackAnalysisOptions, TrackComparison, TrackComparisonOptions } from './analysis.js';
 import {
   FileConversionError,
   type ProcessActivitiesOptions,
@@ -12,6 +13,8 @@ import {
 import type { FileWorkerCommand, FileWorkerResponse, FileWorkerResult } from './worker-protocol.js';
 
 export interface FileConverterClient {
+  analyze(activity: Activity, options?: TrackAnalysisOptions): Promise<AnalyzedTrack>;
+  compare(trackA: AnalyzedTrack, trackB: AnalyzedTrack, options?: TrackComparisonOptions): Promise<TrackComparison>;
   parse(data: TrackFileData, format: TrackFileInputFormat, options?: ParseTrackOptions): Promise<Activity>;
   process(activities: Activity[], options?: ProcessActivitiesOptions): Promise<ProcessedActivity>;
   serialize(activity: Activity, format: TrackFileOutputFormat, options?: SerializeActivityOptions): Promise<SerializedActivity>;
@@ -72,6 +75,16 @@ export function createFileConverterClient(workerURL: string | URL): FileConverte
   }
 
   return {
+    async analyze(activity, options) {
+      const result = await send({ operation: 'analyze', activity, options });
+      if (result.operation !== 'analyze') throw new Error('Unexpected file worker response.');
+      return result.track;
+    },
+    async compare(trackA, trackB, options) {
+      const result = await send({ operation: 'compare', trackA, trackB, options });
+      if (result.operation !== 'compare') throw new Error('Unexpected file worker response.');
+      return result.comparison;
+    },
     async parse(data, format, options) {
       const result = await send({ operation: 'parse', data, format, options });
       if (result.operation !== 'parse') throw new Error('Unexpected file worker response.');

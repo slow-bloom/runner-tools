@@ -152,6 +152,7 @@ export function parseTCX(xmlText: string, options?: ParseTrackOptions): Activity
       hr,
       cad,
       distance,
+      recordedDistance: distance,
       speed,
       power,
       ...(sport !== 'running' ? { sport } : {}),
@@ -165,6 +166,8 @@ export function parseTCX(xmlText: string, options?: ParseTrackOptions): Activity
     name: defaultName,
     points: normalizedPoints,
     summary,
+    recordedDistance: lapSummary?.distance ?? null,
+    recordedDuration: lapSummary?.duration ?? null,
   };
 }
 

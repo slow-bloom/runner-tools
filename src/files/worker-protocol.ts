@@ -1,5 +1,9 @@
 import type { Activity, ParseTrackOptions } from './types.js';
 import {
+  analyzeTrack, compareTracks, type AnalyzedTrack, type TrackAnalysisOptions,
+  type TrackComparison, type TrackComparisonOptions,
+} from './analysis.js';
+import {
   FileConversionError,
   parseActivityFile,
   processActivities,
@@ -15,6 +19,8 @@ import {
 } from './converter.js';
 
 export type FileWorkerCommand =
+  | { operation: 'analyze'; activity: Activity; options?: TrackAnalysisOptions }
+  | { operation: 'compare'; trackA: AnalyzedTrack; trackB: AnalyzedTrack; options?: TrackComparisonOptions }
   | { operation: 'parse'; data: TrackFileData; format: TrackFileInputFormat; options?: ParseTrackOptions }
   | { operation: 'process'; activities: Activity[]; options?: ProcessActivitiesOptions }
   | { operation: 'serialize'; activity: Activity; format: TrackFileOutputFormat; options?: SerializeActivityOptions };
@@ -22,6 +28,8 @@ export type FileWorkerCommand =
 export type FileWorkerRequest = FileWorkerCommand & { id: number };
 
 export type FileWorkerResult =
+  | { operation: 'analyze'; track: AnalyzedTrack }
+  | { operation: 'compare'; comparison: TrackComparison }
   | { operation: 'parse'; activity: Activity }
   | { operation: 'process'; result: ProcessedActivity }
   | { operation: 'serialize'; file: SerializedActivity };
@@ -35,6 +43,12 @@ export function handleFileWorkerRequest(request: FileWorkerRequest): FileWorkerR
   try {
     let result: FileWorkerResult;
     switch (request.operation) {
+      case 'analyze':
+        result = { operation: 'analyze', track: analyzeTrack(request.activity, request.options) };
+        break;
+      case 'compare':
+        result = { operation: 'compare', comparison: compareTracks(request.trackA, request.trackB, request.options) };
+        break;
       case 'parse':
         result = { operation: 'parse', activity: parseActivityFile(request.data, request.format, request.options) };
         break;

@@ -1,7 +1,11 @@
 import type { RunnerToolsLocale } from './en.js';
+import { zhTrackAnalysis } from './track-analysis.js';
+import { zhRaceWeek } from './race-week.js';
 
 export const zhLocale: RunnerToolsLocale = {
   locale: 'zh',
+  trackAnalysis: zhTrackAnalysis,
+  raceWeek: zhRaceWeek,
   files: {
     defaultActivityName: '运动记录',
     emptyActivityName: '空活动',

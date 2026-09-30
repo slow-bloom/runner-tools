@@ -50,6 +50,7 @@ export function parseKML(xmlText: string, options?: ParseTrackOptions): Activity
             hr: null,
             cad: null,
             distance: null,
+            recordedDistance: null,
           });
         }
       }
@@ -63,6 +64,8 @@ export function parseKML(xmlText: string, options?: ParseTrackOptions): Activity
     name,
     points: normalizedPoints,
     summary,
+    recordedDistance: null,
+    recordedDuration: null,
   };
 }
 

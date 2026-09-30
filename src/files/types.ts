@@ -30,6 +30,8 @@ export interface Trackpoint {
   cadenceUnit?: 'steps/min' | 'cycles/min';
   /** Cumulative distance from the start of the activity in meters. */
   distance: number | null;
+  /** Original device distance before GPS fallback; null when the source has no measurement. */
+  recordedDistance?: number | null;
   /** Instantaneous speed in meters per second (m/s). Null if unavailable. */
   speed?: number | null;
   /** Instantaneous power in watts. Null if unavailable. */
@@ -120,6 +122,9 @@ export interface Activity {
   points: Trackpoint[];
   /** Computed or recorded summary statistics. */
   summary: ActivitySummary;
+  /** Original header totals, distinct from derived summary values. Null when unrecorded. */
+  recordedDistance?: number | null;
+  recordedDuration?: number | null;
   /** Source FIT metadata. Opaque fields may contain location, device IDs, or stale aggregates. */
   fit?: FITMetadata;
 }

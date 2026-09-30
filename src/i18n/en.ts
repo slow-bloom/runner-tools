@@ -92,6 +92,8 @@ export interface FilesI18n {
 
 export interface RunnerToolsLocale {
   locale: string;
+  trackAnalysis: TrackAnalysisLocale;
+  raceWeek: RaceWeekLocale;
   files: FilesI18n;
   vdot: {
     zones: {
@@ -196,6 +198,8 @@ export interface RunnerToolsLocale {
 
 export const enLocale: RunnerToolsLocale = {
   locale: 'en',
+  trackAnalysis: enTrackAnalysis,
+  raceWeek: enRaceWeek,
   files: {
     defaultActivityName: 'Activity',
     emptyActivityName: 'Empty Activity',
@@ -425,3 +429,5 @@ export const enLocale: RunnerToolsLocale = {
     },
   },
 };
+import { enTrackAnalysis, type TrackAnalysisLocale } from './track-analysis.js';
+import { enRaceWeek, type RaceWeekLocale } from './race-week.js';

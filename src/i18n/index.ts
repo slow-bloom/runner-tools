@@ -3,6 +3,8 @@ import { zhLocale } from './zh.js';
 
 export type { RunnerToolsLocale, VDOTZoneI18n };
 export { enLocale, zhLocale };
+export { enTrackAnalysis, zhTrackAnalysis, type TrackAnalysisLocale } from './track-analysis.js';
+export { enRaceWeek, zhRaceWeek, type RaceWeekLocale } from './race-week.js';
 
 const localeRegistry = new Map<string, RunnerToolsLocale>();
 

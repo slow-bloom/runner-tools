@@ -10,3 +10,5 @@ export * from './files/converter.js';
 export * from './files/worker-client.js';
 export * from './utils/format.js';
 export * from './i18n/index.js';
+export * from './audio/index.js';
+export * from './timers/index.js';

@@ -18,6 +18,11 @@ Experience these algorithms live in action on the web:
 - **[Running Efficiency Calculator](https://apexrun.fit/tools/running-efficiency-calculator/)**
 - **[Pace & Split Calculator](https://apexrun.fit/tools/pace-calculator/)**
 - **[Running Track File Converter](https://apexrun.fit/tools/running-file-converter/)** ([中文](https://www.apexrun.net/tools/running-file-converter/))
+- **[GPX & FIT Track Comparator](https://apexrun.fit/tools/gpx-fit-comparator/)** ([中文](https://www.apexrun.net/tools/gpx-fit-comparator/))
+- **[GPS Difference Analyzer](https://apexrun.fit/tools/gps-drift-analyzer/)** ([中文](https://www.apexrun.net/tools/gps-drift-analyzer/))
+- **[Cadence Metronome & Audio Generator](https://apexrun.fit/tools/cadence-metronome-generator/)** ([中文](https://www.apexrun.net/tools/cadence-metronome-generator/))
+- **[Race Week Planner](https://apexrun.fit/tools/race-week-planner/)**
+- **[Runner Strength Timer](https://www.apexrun.net/tools/runner-strength-timer/)** (Chinese)
 - **[Weekly Mileage Ramp-Up Calculator](https://apexrun.fit/tools/weekly-mileage-calculator/)**
 
 
@@ -31,6 +36,8 @@ Experience these algorithms live in action on the web:
 - **Strict Null Safety**: Clear contracts where invalid, unphysiological, or unsolvable inputs return `null` instead of throwing or generating `NaN`.
 - **No Silent Clamping**: Discontinuous boundary cases and out-of-domain offsets are explicitly exposed rather than clamped silently.
 - **Local File Conversion**: Read FIT, GPX, TCX, KML and CSV; export all five plus GeoJSON. A standalone Web Worker keeps decoding, editing and encoding off the browser's UI thread, without CDN parser imports or file uploads.
+- **Honest Track Comparison**: Align tracks on overlapping timestamps or explicitly labeled route progress, interpolate mismatched sampling rates, and keep measured device distance separate from GPS-derived estimates.
+- **Deterministic Interactive Tools**: Audio scheduling follows the Web Audio clock, strength intervals follow monotonic elapsed time, and race-week calendar output is testable and locale-aware.
 
 ---
 
@@ -71,6 +78,10 @@ import {
   solvePace,
   parseGPX,
   serializeToTCX,
+  analyzeTrack,
+  createCadenceMetronome,
+  createStrengthTimer,
+  createRaceWeekPlan,
 } from '@slow-bloom/runner-tools';
 
 // 1. Calculate Daniels VDOT & training paces
@@ -92,6 +103,9 @@ console.log('Pace:', pace?.paceFormatted); // "4'30\""
 const activity = parseGPX(gpxContent);
 const tcxContent = serializeToTCX(activity);
 
+// 6. Analyze GPS distance without treating it as ground truth
+const track = analyzeTrack(activity);
+
 ```
 
 ---
@@ -110,6 +124,10 @@ Detailed mathematical derivations, physiological domains, and complete API speci
 | **`pace`** | Formula | 3-way pace/time/distance solver, unit conversions & split tables | [docs/formulas/pace.md](./docs/formulas/pace.md) |
 | **`weekly-mileage`** | Formula | 10% progression rule, ACWR recovery periodization & deload cycles | [docs/formulas/weekly-mileage.md](./docs/formulas/weekly-mileage.md) |
 | **`files`** | Tool | FIT, GPX, TCX, KML and CSV parsing, GeoJSON export, cropping, merging, GPS redaction and local Web Worker conversion | [docs/files/running-file-converter.md](./docs/files/running-file-converter.md) |
+| **`track-analysis`** | Tool | Recorded-vs-GPS provenance, timestamp/progress alignment, interpolation, split and drift indicators | [docs/files/track-analysis.md](./docs/files/track-analysis.md) |
+| **`race-week`** | Planner | Localized race-week template, pacing/fueling timeline and RFC 5545 calendar export | [docs/formulas/race-week.md](./docs/formulas/race-week.md) |
+| **`audio`** | Tool | Cadence target/tap tempo, cancellable Web Audio metronome, WAV and optional MP3 export | [docs/audio/cadence-metronome.md](./docs/audio/cadence-metronome.md) |
+| **`timers`** | Tool | Workout schema/presets, timeline, elapsed-time strength state machine and cue adapter | [docs/timers/strength-timer.md](./docs/timers/strength-timer.md) |
 | **`i18n`** | Guide | Custom dictionaries, locale registration, and fallback resolution | [docs/guides/i18n-and-customization.md](./docs/guides/i18n-and-customization.md) |
 
 ---
@@ -127,6 +145,10 @@ All algorithms conform to strict physiological domains:
 | **Running Efficiency** | Cadence: 100 – 260 spm; GCT: 100 – 500 ms; Duty Factor < 50% | Returns `null` for invalid components |
 | **Pace Solver** | Distance: 0.01 – 10,000; Pace: 60 – 3600 s/unit; Exactly 2 defined fields | Returns `null` |
 | **Weekly Mileage** | Volume: 1 – 500 units; Max Weekly Increase: 1% – 50% | Returns `null` |
+| **Track Analysis** | 2+ GPS points; comparison samples: 2–10,001 | Throws `FileConversionError` |
+| **Race Week** | Standard 5K/10K/Half/Marathon; volume: 1–500; frequency: 2–7 | Returns `null` |
+| **Cadence Audio** | 120–210 spm; export: 1–900 s; WAV: 8–192 kHz | Throws `CadenceAudioError` |
+| **Strength Timer** | 1–100 exercises; rounds: 1–10; import: ≤1 MiB | Throws `StrengthTimerError` |
 
 ---
 

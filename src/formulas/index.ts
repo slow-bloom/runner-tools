@@ -5,3 +5,4 @@ export * from './age-grading.js';
 export * from './running-efficiency.js';
 export * from './pace.js';
 export * from './weekly-mileage.js';
+export * from './race-week.js';

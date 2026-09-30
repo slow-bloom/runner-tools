@@ -163,6 +163,7 @@ export function parseCSV(csvText: string, options?: ParseTrackOptions): Activity
       lon: lon !== null && Number.isFinite(lon) ? lon : null,
       ele: ele !== null && Number.isFinite(ele) ? ele : null,
       distance: dist !== null && Number.isFinite(dist) ? dist : null,
+      recordedDistance: dist !== null && Number.isFinite(dist) ? dist : null,
       hr: hr !== null && Number.isFinite(hr) ? hr : null,
       cad: cad !== null && Number.isFinite(cad) ? cad : null,
       speed: spd !== null && Number.isFinite(spd) ? spd : null,
@@ -178,5 +179,7 @@ export function parseCSV(csvText: string, options?: ParseTrackOptions): Activity
     name: defaultName,
     points: normalizedPoints,
     summary,
+    recordedDistance: null,
+    recordedDuration: null,
   };
 }

@@ -626,6 +626,7 @@ export function parseFIT(input: ArrayBuffer | Uint8Array, options?: ParseTrackOp
       cad: cadence === null ? null : (cadence + (get(53, 128) ?? 0)) * cadenceFactor(sport),
       cadenceUnit: cadenceFactor(sport) === 2 ? 'steps/min' : 'cycles/min',
       distance,
+      recordedDistance: distance,
       speed,
       power: get(7),
       temp: get(13),
@@ -671,6 +672,8 @@ export function parseFIT(input: ArrayBuffer | Uint8Array, options?: ParseTrackOp
       ?? getLocale(options?.locale).files.defaultActivityName,
     points,
     summary,
+    recordedDistance: source.distance ?? null,
+    recordedDuration: source.duration ?? null,
     fit: {
       protocolVersion: decoded.protocolVersion,
       profileVersion: decoded.profileVersion,

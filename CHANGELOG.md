@@ -15,11 +15,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A standalone `runner-tools.worker.js` and `createFileConverterClient` for local asynchronous parsing, editing and downloads, with explicit worker failures and request correlation.
 - English and Chinese converter status, validation and metadata-loss messages.
 - Regression coverage for edited summaries, GPS-free exports, developer-index collisions, missing timestamps and actual worker message/binary transfers.
+- Track analysis with recorded-distance provenance, exact split interpolation, timestamp/progress alignment, sampling diagnostics and worker operations.
+- Cadence metronome modules for target/tap calculation, cancellable Web Audio scheduling, cooperative WAV serialization and optional caller-supplied MP3 encoding.
+- Strength workout validation, localized presets, deterministic import/export, timeline statistics, monotonic elapsed-time state and optional audio cues.
+- Localized race-week templates and deterministic RFC 5545 calendar export with daylight-saving-aware local date arithmetic.
 
 ### Changed
 - Privacy edits remove opaque FIT metadata from both activities and points, in addition to visible coordinates, with explicit warnings. Merges and GPS recalculation preserve record-level developer data while rebuilding source summaries.
 - Edited file summaries retain canonical FIT cadence and recompute running dynamics from retained samples.
 - Website synchronization now includes the worker and source maps alongside the existing browser bundle and license.
+- Comparator, drift analyzer, cadence metronome, strength timer and race-week planner websites now consume the shared modules instead of duplicating their algorithms.
+- Existing pace, pace-converter, weekly-mileage and heart-rate consumers now use the current shared interfaces without silent formula fallbacks.
 
 ## [0.2.0] - 2026-09-29
 

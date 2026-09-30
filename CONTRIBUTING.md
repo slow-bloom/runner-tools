@@ -50,6 +50,18 @@ their source maps and the MIT license into the English and Chinese websites.
 Keep parsing and editing in the shared library; website templates should only
 handle controls, localized messages, maps, charts and downloads.
 
+The same seam discipline applies to the remaining interactive tools:
+
+- Track parsing, provenance, resampling, comparison and diagnostics belong in
+  `src/files`; Leaflet layers and localized tables stay in website adapters.
+- Cadence math, scheduling, synthesis and encoding belong in `src/audio`;
+  optional MP3 codecs are injected by callers and never become runtime
+  dependencies.
+- Workout validation, timelines, timer state and cues belong in `src/timers`;
+  storage, file pickers, wake lock and fullscreen stay in the browser adapter.
+- Planner arithmetic and calendar serialization belong in `src/formulas`;
+  the website only renders returned plan data.
+
 `npm run test:coverage` measures coverage with Vitest's V8 provider. Converter
 regressions include source-summary preservation, cropped summaries, FIT developer
 identifier remapping, opaque metadata removal during privacy edits, worker errors
@@ -67,6 +79,9 @@ When submitting code to this library, please adhere to these core principles:
 4. **Strict Dual Module Support**: Any exports must maintain strict compatibility with both ES Modules (`dist/index.js`, `dist/index.d.ts`) and CommonJS under TypeScript's `node16` resolution (`dist/index.cjs`, `dist/index.d.cts`).
 5. **Localization Contract**: Any user-facing strings or labels must provide fallback to the English dictionary (`enLocale`) and support deep partial overrides.
 6. **Explicit File Errors**: The high-level converter throws `FileConversionError` with a stable localization code for invalid input or unsupported edits. Workers must reject failed operations, never return an empty successful download or silently run expensive conversion on the UI thread.
+7. **Measurement Provenance**: Never relabel GPS-derived values as device measurements or accuracy ground truth. Estimates and progress alignment must remain explicit in types, docs and UI.
+8. **Elapsed-Time State**: Interactive timers must derive state from a monotonic clock, not count interval callbacks. Browser throttling must not create timer drift or burst old audio.
+9. **Injected Browser Capabilities**: Web Audio, MP3 encoders, speech, storage, wake lock, fullscreen and clocks enter through callers/adapters. Importing the package must not read browser globals.
 
 ---
 
@@ -78,6 +93,7 @@ Before submitting a Pull Request, ensure that:
 - [ ] TypeScript checks succeed with zero errors: `npm run typecheck`
 - [ ] The build succeeds: `npm run build`
 - [ ] New formulas or changes include comprehensive unit tests covering standard values, physiological edges, and invalid/unbracketed inputs.
+- [ ] New interactive modules test delayed clocks, cancellation, invalid data and adapter error modes without relying on real time.
 - [ ] Documentation and example snippets are updated and adhere to strict null checking.
 
 ---

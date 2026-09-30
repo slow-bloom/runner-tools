@@ -8,3 +8,4 @@ export * from './geojson.js';
 export * from './csv.js';
 export * from './merge.js';
 export * from './fit.js';
+export * from './analysis.js';

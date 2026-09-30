@@ -93,6 +93,7 @@ export function parseGPX(xmlText: string, options?: ParseTrackOptions): Activity
       hr,
       cad,
       distance: null,
+      recordedDistance: null,
       speed,
       temp,
       ...(sport === 'cycling' ? { sport } : {}),
@@ -107,6 +108,8 @@ export function parseGPX(xmlText: string, options?: ParseTrackOptions): Activity
     name,
     points: normalizedPoints,
     summary,
+    recordedDistance: null,
+    recordedDuration: null,
   };
 }
 
