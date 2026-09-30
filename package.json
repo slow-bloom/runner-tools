@@ -21,13 +21,21 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:package": "npm run build && node scripts/test-package.mjs",
     "typecheck": "tsc --noEmit",
     "build": "node build.mjs",
     "prepack": "npm test && npm run build",
+    "prepublishOnly": "npm run typecheck && npm run test:package",
     "sync:website": "npm run build && node scripts/sync-website.mjs"
   },
   "repository": {

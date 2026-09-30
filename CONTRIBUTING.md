@@ -67,6 +67,12 @@ regressions include source-summary preservation, cropped summaries, FIT develope
 identifier remapping, opaque metadata removal during privacy edits, worker errors
 and binary transfers through an isolated worker.
 
+Coverage is a regression signal, not a target to game. New and changed behavior
+must test meaningful success paths, boundaries, invalid input, state transitions,
+and explicit error modes. The project does not require 100% branch coverage when
+the remaining branches are defensive fallbacks or generated/runtime-specific
+paths that add no additional behavioral confidence.
+
 ---
 
 ## Architecture & Design Principles
@@ -92,6 +98,7 @@ Before submitting a Pull Request, ensure that:
 - [ ] All unit tests pass: `npm test`
 - [ ] TypeScript checks succeed with zero errors: `npm run typecheck`
 - [ ] The build succeeds: `npm run build`
+- [ ] The packed ESM, CommonJS, and TypeScript entry points pass: `npm run test:package`
 - [ ] New formulas or changes include comprehensive unit tests covering standard values, physiological edges, and invalid/unbracketed inputs.
 - [ ] New interactive modules test delayed clocks, cancellation, invalid data and adapter error modes without relying on real time.
 - [ ] Documentation and example snippets are updated and adhere to strict null checking.

@@ -35,5 +35,5 @@ jobs:
       - name: Build distributions and type declarations
         run: npm run build
 
-      - name: Verify package packing
-        run: npm pack --dry-run
+      - name: Verify packed package consumers
+        run: npm run test:package

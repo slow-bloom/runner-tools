@@ -57,7 +57,7 @@ yarn add @slow-bloom/runner-tools
 Or directly via CDN in HTML:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@slow-bloom/runner-tools@0.1.0/dist/runner-tools.global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@slow-bloom/runner-tools@0.2.0/dist/runner-tools.global.js"></script>
 <script>
   const result = RunnerTools.calculateVDOT({ distanceMeters: 5000, timeSeconds: 1200 });
   if (result) {
@@ -65,6 +65,11 @@ Or directly via CDN in HTML:
   }
 </script>
 ```
+
+The browser bundle and `dist/runner-tools.worker.js` are supported distribution
+artifacts. Host both on the same origin when using `createFileConverterClient`;
+the worker installs a message handler and should not be imported into application
+code as a regular module.
 
 ---
 
@@ -165,6 +170,9 @@ npm run typecheck
 
 # Build dual bundle & browser distribution
 npm run build
+
+# Verify the packed ESM, CommonJS, and TypeScript consumer entry points
+npm run test:package
 
 # Measure coverage
 npm run test:coverage
