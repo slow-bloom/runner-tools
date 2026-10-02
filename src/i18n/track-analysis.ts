@@ -6,6 +6,7 @@ export interface TrackAnalysisLocale {
   alignmentError: string;
   uploadOther: string;
   alignment: string;
+  comparisonAlignment: string;
   autoAlignment: string;
   timeAlignment: string;
   progressAlignment: string;
@@ -16,6 +17,9 @@ export interface TrackAnalysisLocale {
   raw: string;
   time: string;
   points: string;
+  rawPointsZoom: string;
+  rawPointsVisible: string;
+  rawPointsEmpty: string;
   progress: string;
   separation: string;
   delta: string;
@@ -65,6 +69,7 @@ export const enTrackAnalysis: TrackAnalysisLocale = {
   alignmentError: 'These tracks have no overlapping timestamps. Choose automatic or route-progress alignment.',
   uploadOther: 'Track {track} is loaded. Add the other track to compare them.',
   alignment: 'Compare using',
+  comparisonAlignment: 'Metrics, splits and diagnostics alignment',
   autoAlignment: 'Automatic (shared timestamps when available)',
   timeAlignment: 'Shared timestamps',
   progressAlignment: 'Relative route progress',
@@ -75,6 +80,9 @@ export const enTrackAnalysis: TrackAnalysisLocale = {
   raw: 'Raw GPS distance',
   time: 'Time',
   points: 'points',
+  rawPointsZoom: 'More than {limit} GPS points are in view. Zoom in to inspect individual GPS points. Only the route outline is shown; samples are not downsampled.',
+  rawPointsVisible: 'Showing all {count} recorded GPS points in the visible map area. No downsampling.',
+  rawPointsEmpty: 'No recorded GPS points in this view. Pan back to the route to inspect them.',
   progress: 'Progress',
   separation: 'Separation',
   delta: 'Difference',
@@ -83,7 +91,7 @@ export const enTrackAnalysis: TrackAnalysisLocale = {
   interval: 'Average sampling interval',
   splitTitle: 'Kilometer split comparison',
   splitTime: 'Track A GPS milestones, interpolated against Track B at the same timestamps. Missing intervals remain unavailable.',
-  splitProgress: 'Track A GPS milestones compared at equal relative route progress. These are not same-time device differences.',
+  splitProgress: 'Track A GPS milestones compared at equal relative route progress. Each full-row difference is the overall raw-distance ratio by construction, not measured local drift.',
   splitSingle: 'Recorded distance versus raw GPS at interpolated kilometer milestones.',
   summaryEstimate: 'Only a recorded total is available: per-split distance is a proportional estimate, not measured local drift.',
   gpsOnly: 'No independent recorded distance is available. GPS distance alone cannot establish device drift.',
@@ -124,6 +132,7 @@ export const zhTrackAnalysis: TrackAnalysisLocale = {
   alignmentError: '两条轨迹的时间范围没有交集，请选择自动对齐或按路线进度对齐。',
   uploadOther: '已载入轨迹 {track}，再添加另一份记录即可比对。',
   alignment: '对齐方式',
+  comparisonAlignment: '指标、分段与诊断的对齐方式',
   autoAlignment: '自动（优先按共同时间戳）',
   timeAlignment: '共同时间戳',
   progressAlignment: '相对路线进度',
@@ -134,6 +143,9 @@ export const zhTrackAnalysis: TrackAnalysisLocale = {
   raw: '原始 GPS 里程',
   time: '用时',
   points: '个点',
+  rawPointsZoom: '当前视野内超过 {limit} 个 GPS 点，请放大地图查看原始点位。目前仅显示路线轮廓，未对采样点进行抽稀。',
+  rawPointsVisible: '显示当前地图视野内的全部 {count} 个原始 GPS 点，未进行抽稀。',
+  rawPointsEmpty: '当前视野内没有原始 GPS 点，请移回路线所在区域查看。',
   progress: '进度',
   separation: '点位间距',
   delta: '差值',
@@ -142,7 +154,7 @@ export const zhTrackAnalysis: TrackAnalysisLocale = {
   interval: '平均采样间隔',
   splitTitle: '逐公里分段比对',
   splitTime: '按轨迹 A 的 GPS 公里节点插值，与轨迹 B 同一时刻比对；记录空缺不作估算。',
-  splitProgress: '按轨迹 A 的 GPS 公里节点与相同路线进度比对，并非两台设备同一时刻的里程差。',
+  splitProgress: '按轨迹 A 的 GPS 公里节点与相同路线进度比对。完整公里行的差值按总里程比例生成，并非测得的局部漂移。',
   splitSingle: '在插值后的公里节点，比对记录里程与原始 GPS 累加里程。',
   summaryEstimate: '文件仅提供汇总里程，分段数据为按比例分配的估算值，不能用于判断局部漂移。',
   gpsOnly: '文件没有独立记录的里程，仅凭 GPS 累加值无法确定设备漂移。',

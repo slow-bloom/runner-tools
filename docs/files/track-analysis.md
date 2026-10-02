@@ -78,6 +78,19 @@ client.dispose();
 ```
 
 The two websites retain their localized maps, layer selectors, tables, markers
-and scrubbers. Upload and comparison revisions prevent older worker responses
+and scrubbers. The comparator map samples both tracks with `sampleTrackDistance`
+at the same cumulative raw GPS distance, from zero to the shorter track's total
+(or the full total with one track). Cursor positions are interpolated; the
+Raw points layer shows the recorded GPS samples. Line is the default renderer.
+Raw points mode draws all samples within the current viewport, up to a combined
+2,000-point budget across both tracks. Above that budget it displays only the
+route outline and a zoom-in hint, rather than silently downsampling. The visible
+points refresh on map movement completion; style switches preserve the viewport
+and distance cursor.
+
+The map's current separation
+uses these distance-aligned positions, independently of the `compareTracks`
+time/progress alignment used by the metrics, split table and diagnostics.
+Upload and comparison revisions prevent older worker responses
 from replacing newer selections. Parsing and analysis do not upload files;
 Leaflet's basemap tiles are still requested from external map providers.
