@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - English and Chinese converter status, validation and metadata-loss messages.
 - Regression coverage for edited summaries, GPS-free exports, developer-index collisions, missing timestamps and actual worker message/binary transfers.
 - Track analysis with recorded-distance provenance, exact split interpolation, timestamp/progress alignment, sampling diagnostics and worker operations.
+- `createRecordedDistanceSampler` for indexed point-counter positions on one GPS route, with recorded coverage and explicit missing-data handling.
+- Source FIT/TCX lap provenance and recorded-lap GPS comparisons, with explicit partial coverage, continuous map paths, and no extrapolated lap finishes.
 - Cadence metronome modules for target/tap calculation, cancellable Web Audio scheduling, cooperative WAV serialization and optional caller-supplied MP3 encoding.
 - Strength workout validation, localized presets, deterministic import/export, timeline statistics, monotonic elapsed-time state and optional audio cues.
 - Localized race-week templates and deterministic RFC 5545 calendar export with daylight-saving-aware local date arithmetic.
@@ -25,6 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Edited file summaries retain canonical FIT cadence and recompute running dynamics from retained samples.
 - Website synchronization now includes the worker and source maps alongside the existing browser bundle and license.
 - Comparator, drift analyzer, cadence metronome, strength timer and race-week planner websites now consume the shared modules instead of duplicating their algorithms.
+- The GPS drift analyzer focuses on recorded laps, with a linked lap-end map cursor and accessible cumulative-difference chart. Readouts compare recorded and GPS totals over the same laps without estimating within-lap watch values.
+- The analyzer removes its advanced point-counter view, dual cursors and heatmap; shared point-counter APIs remain available. Line and bounded opt-in raw points preserve the selected checkpoint and viewport.
+- Incomplete lap coverage, unavailable cumulative comparisons and lap-versus-workout total mismatches remain explicit rather than being rescaled or extrapolated.
 - Existing pace, pace-converter, weekly-mileage and heart-rate consumers now use the current shared interfaces without silent formula fallbacks.
 
 ## [0.2.0] - 2026-09-29

@@ -59,6 +59,19 @@ function activityWithDeveloper(value: number, offsetSeconds = 0): Activity {
 }
 
 describe('file conversion interface', () => {
+  it('retains source laps only when the activity scope and distance data are unchanged', () => {
+    const input = activity();
+    input.recordedLaps = [{
+      startTime: input.points[0].time, endTime: input.points.at(-1)!.time,
+      distance: 150, endTimeBasis: 'recorded',
+    }];
+    expect(processActivities([input]).activity.recordedLaps).toEqual(input.recordedLaps);
+    for (const options of [{ cropStartMeters: 30 }, { stripGPS: true }, { forceGpsDistance: true }]) {
+      expect(processActivities([input], options).activity.recordedLaps).toBeUndefined();
+    }
+    expect(processActivities([input, activity('Second', 60)]).activity.recordedLaps).toBeUndefined();
+  });
+
   it('parses binary text uploads and preserves sensors in GPX, TCX and CSV round trips', () => {
     for (const format of ['gpx', 'tcx', 'csv'] as const) {
       const input = activity();

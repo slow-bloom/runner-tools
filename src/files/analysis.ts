@@ -1,4 +1,4 @@
-import type { Activity, Trackpoint } from './types.js';
+import type { Activity, Trackpoint, RecordedLap } from './types.js';
 import { calculateElevationGain, haversineDistance, normalizeTrackDistances } from './geo.js';
 import { FileConversionError } from './converter.js';
 
@@ -34,6 +34,25 @@ export interface DriftSegment {
   possibleSpeedSpike: boolean;
 }
 
+export interface AnalyzedLap {
+  lap: number;
+  startTime: Date | null;
+  endTime: Date | null;
+  recordedMeters: number | null;
+  /** Only available when the entire recorded time interval has usable GPS coverage. */
+  gpsMeters: number | null;
+  coveredGpsMeters: number | null;
+  coveredSeconds: number;
+  durationSeconds: number | null;
+  deltaMeters: number | null;
+  cumulativeDeltaMeters: number | null;
+  status: 'complete' | 'partial' | 'no-gps' | 'invalid-time' | 'missing-distance' | 'overlap' | 'sample-end';
+  /** Separate continuous GPS paths; missing coordinates/timestamps and gaps over 60s are not joined. */
+  paths: AnalysisPoint[][];
+  startPoint: AnalysisPoint | null;
+  endPoint: AnalysisPoint | null;
+}
+
 export interface AnalyzedTrack {
   name: string;
   points: AnalysisPoint[];
@@ -47,6 +66,7 @@ export interface AnalyzedTrack {
   deltaMeters: number | null;
   deltaPercent: number | null;
   splits: TrackSplit[];
+  laps: AnalyzedLap[];
   segments: DriftSegment[];
   possibleStationaryDriftMeters: number;
   speedSpikeCount: number;
@@ -123,6 +143,47 @@ export function sampleTrackProgress(track: AnalyzedTrack, fraction: number): Ana
   return sampleTrackDistance(track, track.rawGpsDist * fraction);
 }
 
+export interface RecordedDistanceSampler {
+  /** Measured, rebased distance coverage; null without two GPS-located recorded samples. */
+  startDistance: number | null;
+  endDistance: number | null;
+  /** Earliest point at this distance. Missing references and time gaps over 60s are not bridged. */
+  at(meters: number): AnalysisPoint | null;
+}
+
+/** Build once per analyzed track; never turn a proportional summary into a watch position. */
+export function createRecordedDistanceSampler(track: AnalyzedTrack): RecordedDistanceSampler {
+  const samples = track.distanceBasis === 'recorded-points'
+    ? track.points.flatMap((point, index) => finite(point.normWatchDist)
+      ? [{ point, index, meters: point.normWatchDist }] : [])
+    : [];
+  const startDistance = samples.length >= 2 ? samples[0].meters : null;
+  const endDistance = samples.length >= 2 ? samples[samples.length - 1].meters : null;
+  return {
+    startDistance, endDistance,
+    at(meters: number): AnalysisPoint | null {
+      if (!Number.isFinite(meters) || startDistance === null || endDistance === null ||
+        meters < startDistance || meters > endDistance) return null;
+      let low = 0;
+      let high = samples.length - 1;
+      while (low < high) {
+        const middle = (low + high) >>> 1;
+        if (samples[middle].meters < meters) low = middle + 1;
+        else high = middle;
+      }
+      const after = samples[low];
+      if (after.meters === meters) return { ...after.point };
+      const before = samples[Math.max(0, low - 1)];
+      if (after.index !== before.index + 1) return null;
+      const start = timeValue(before.point.time);
+      const end = timeValue(after.point.time);
+      if (start !== null && end !== null && (end < start || end - start > 60000)) return null;
+      const span = after.meters - before.meters;
+      return span > 0 ? interpolate(before.point, after.point, (meters - before.meters) / span) : null;
+    },
+  };
+}
+
 function timedSampler(track: AnalyzedTrack, maxGapSeconds: number) {
   const points = track.points.filter((point) => timeValue(point.time) !== null);
   return {
@@ -146,6 +207,91 @@ function timedSampler(track: AnalyzedTrack, maxGapSeconds: number) {
       return interpolate(before, after, (timestamp - before.time!.getTime()) / span);
     },
   };
+}
+
+function analyzeRecordedLaps(laps: RecordedLap[], points: AnalysisPoint[]): AnalyzedLap[] {
+  const samples = points.flatMap((point, index) => {
+    const time = timeValue(point.time);
+    return time === null ? [] : [{ point, index, time }];
+  });
+  const lowerBound = (time: number) => {
+    let low = 0;
+    let high = samples.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (samples[middle].time < time) low = middle + 1;
+      else high = middle;
+    }
+    return low;
+  };
+  let cumulative: number | null = 0;
+  let previousEnd = -Infinity;
+  return laps.map((lap, index) => {
+    const start = timeValue(lap.startTime);
+    const end = timeValue(lap.endTime);
+    const recordedMeters = finite(lap.distance) && lap.distance >= 0 ? lap.distance : null;
+    const result: AnalyzedLap = {
+      lap: index + 1, startTime: lap.startTime, endTime: lap.endTime, recordedMeters,
+      gpsMeters: null, coveredGpsMeters: null, coveredSeconds: 0,
+      durationSeconds: start !== null && end !== null && end > start && lap.endTimeBasis === 'recorded' ? (end - start) / 1000 : null,
+      deltaMeters: null, cumulativeDeltaMeters: null, status: 'invalid-time',
+      paths: [], startPoint: null, endPoint: null,
+    };
+    if (start === null || end === null || end <= start) {
+      cumulative = null;
+      return result;
+    }
+    let coveredMilliseconds = 0;
+    let coveredMeters = 0;
+    let connected = false;
+    let hasGap = false;
+    const first = Math.max(1, lowerBound(start));
+    const last = Math.min(samples.length - 1, lowerBound(end));
+    for (let i = first; i <= last; i++) {
+      const before = samples[i - 1];
+      const after = samples[i];
+      const span = after.time - before.time;
+      const from = Math.max(start, before.time);
+      const to = Math.min(end, after.time);
+      // FIT timestamps have second precision. Retain same-second GPS edges in [start, end).
+      const sameSecond = span === 0 && after.time >= start && after.time < end;
+      if (to <= from && !sameSecond) continue;
+      if (span > 60000 || span < 0 || after.index !== before.index + 1 ||
+        before.point.segment !== after.point.segment) {
+        hasGap = true;
+        connected = false;
+        continue;
+      }
+      const a = from === before.time ? before.point : interpolate(before.point, after.point, (from - before.time) / span);
+      const b = to === after.time ? after.point : interpolate(before.point, after.point, (to - before.time) / span);
+      if (!a || !b) { connected = false; continue; }
+      if (!connected) result.paths.push([a]);
+      result.paths[result.paths.length - 1].push(b);
+      connected = true;
+      coveredMilliseconds += to - from;
+      coveredMeters += b.distance - a.distance;
+    }
+    result.coveredSeconds = coveredMilliseconds / 1000;
+    result.coveredGpsMeters = result.paths.length ? coveredMeters : null;
+    const firstPoint = result.paths[0]?.[0];
+    const lastPoint = result.paths.at(-1)?.at(-1);
+    result.startPoint = firstPoint && timeValue(firstPoint.time) === start ? firstPoint : null;
+    result.endPoint = lap.endTimeBasis === 'recorded' && lastPoint && timeValue(lastPoint.time) === end ? lastPoint : null;
+    const complete = !hasGap && coveredMilliseconds === end - start && lap.endTimeBasis === 'recorded';
+    result.gpsMeters = complete ? coveredMeters : null;
+    result.status = start < previousEnd ? 'overlap'
+      : recordedMeters === null ? 'missing-distance'
+      : !result.paths.length ? 'no-gps'
+      : lap.endTimeBasis !== 'recorded' ? 'sample-end'
+      : complete ? 'complete' : 'partial';
+    previousEnd = Math.max(previousEnd, end);
+    if (result.status === 'complete' && recordedMeters !== null) {
+      result.deltaMeters = recordedMeters - coveredMeters;
+      if (cumulative !== null) cumulative += result.deltaMeters;
+    } else cumulative = null;
+    result.cumulativeDeltaMeters = cumulative;
+    return result;
+  });
 }
 
 /** Analyze recorded-vs-GPS differences without identifying either one as ground truth. */
@@ -246,7 +392,8 @@ export function analyzeTrack(activity: Activity, options: TrackAnalysisOptions =
     distanceBasis,
     deltaMeters: distanceBasis !== 'gps-only' ? totalDist - distance : null,
     deltaPercent: distanceBasis !== 'gps-only' && distance > 0 ? (totalDist - distance) / distance * 100 : null,
-    splits: [], segments, possibleStationaryDriftMeters, speedSpikeCount,
+    splits: [], laps: analyzeRecordedLaps(activity.recordedLaps ?? [], points),
+    segments, possibleStationaryDriftMeters, speedSpikeCount,
     diagnostics: {
       distance: distanceBasis === 'gps-only' ? 'no-reference' : Math.abs(totalDist - distance) > 50 ? 'different' : 'close',
       sampling: intervals === 0 ? 'unknown' : intervalSum / intervals > 2.5 ? 'sparse' : 'dense',

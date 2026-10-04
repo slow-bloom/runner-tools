@@ -394,6 +394,8 @@ export function processActivities(
       name: merged.name,
       points,
       summary,
+      ...(!cropped && !options.stripGPS && !options.forceGpsDistance && activities.length === 1
+        ? { recordedLaps: activities[0].recordedLaps } : {}),
       ...(fit ? { fit } : {}),
     },
     statistics,

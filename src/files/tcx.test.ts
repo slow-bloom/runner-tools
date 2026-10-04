@@ -60,6 +60,12 @@ describe('TCX Parser & Serializer', () => {
     expect(pt1.distance).toBe(42.0);
 
     expect(activity.summary.sport).toBe('running');
+    expect(activity.recordedLaps).toEqual([{
+      startTime: new Date('2026-03-01T07:00:00Z'),
+      endTime: new Date('2026-03-01T07:00:10Z'),
+      distance: 4000,
+      endTimeBasis: 'last-sample',
+    }]);
   });
 
   it('serializes activity to valid TCX format and round-trips metrics', () => {

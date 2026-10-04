@@ -20,6 +20,39 @@ export interface TrackAnalysisLocale {
   rawPointsZoom: string;
   rawPointsVisible: string;
   rawPointsEmpty: string;
+  watchDistance: string;
+  gpsDistance: string;
+  cursorSeparation: string;
+  watchCursorMeasured: string;
+  watchCursorSummary: string;
+  watchCursorGpsOnly: string;
+  watchCursorNoCoverage: string;
+  watchCursorGap: string;
+  watchCursorTotalMismatch: string;
+  lapLabel: string;
+  lapStart: string;
+  lapEnd: string;
+  lapGpsStart: string;
+  lapGpsEnd: string;
+  lapPartialDistance: string;
+  lapComparisonNote: string;
+  lapTotalMismatch: string;
+  lapsUnavailable: string;
+  lapMapStats: string;
+  lapSelectionLabel: string;
+  checkpointLabel: string;
+  checkpointStats: string;
+  checkpointUnavailable: string;
+  checkpointLocationUnavailable: string;
+  lapStatuses: {
+    complete: string;
+    partial: string;
+    'no-gps': string;
+    'invalid-time': string;
+    'missing-distance': string;
+    overlap: string;
+    'sample-end': string;
+  };
   progress: string;
   separation: string;
   delta: string;
@@ -30,6 +63,7 @@ export interface TrackAnalysisLocale {
   splitTime: string;
   splitProgress: string;
   splitSingle: string;
+  recordedTotalMismatch: string;
   summaryEstimate: string;
   gpsOnly: string;
   trackA: string;
@@ -83,6 +117,39 @@ export const enTrackAnalysis: TrackAnalysisLocale = {
   rawPointsZoom: 'More than {limit} GPS points are in view. Zoom in to inspect individual GPS points. Only the route outline is shown; samples are not downsampled.',
   rawPointsVisible: 'Showing all {count} recorded GPS points in the visible map area. No downsampling.',
   rawPointsEmpty: 'No recorded GPS points in this view. Pan back to the route to inspect them.',
+  watchDistance: 'Point counter',
+  gpsDistance: 'GPS distance',
+  cursorSeparation: 'Cursor separation',
+  watchCursorMeasured: 'The point counter uses file-recorded values, rebased at the first reading, not the summary total. It may originate from an exporter. Missing samples and time gaps over 60 seconds remain unavailable.',
+  watchCursorSummary: 'Only a recorded total is available. The map shows the GPS cursor only; proportional estimates cannot establish point-counter positions. The point-counter heatmap is unavailable.',
+  watchCursorGpsOnly: 'No point-distance counter is recorded. The map shows the GPS cursor only; point-counter comparisons are unavailable.',
+  watchCursorNoCoverage: 'There is not enough GPS-located point-counter coverage in the shared range. The map shows the GPS cursor only.',
+  watchCursorGap: 'Point-counter position unavailable here: missing reference or recording gap.',
+  watchCursorTotalMismatch: 'This file has different overall and point-based totals. This cursor follows the point counter, not the overall total; see the breakdown above the advanced table.',
+  lapLabel: 'Lap {value}',
+  lapStart: 'Recorded lap start',
+  lapEnd: 'Recorded lap end',
+  lapGpsStart: 'First available GPS sample; lap start unavailable',
+  lapGpsEnd: 'Last available GPS sample; lap end unavailable',
+  lapPartialDistance: 'covered portion only',
+  lapComparisonNote: '{complete} of {total} laps have complete GPS comparisons. Partial distances show only covered GPS portions; full-lap differences remain unavailable. Cumulative differences stop at the first incomplete or invalid lap. Gaps over 60 seconds are not bridged.',
+  lapTotalMismatch: 'Recorded laps total {laps}, versus {overall} overall. The lap comparison does not reconcile the entire workout.',
+  lapsUnavailable: 'No recorded laps are available. The workout-total comparison and GPS route remain available, but lap-end checkpoints cannot be reconstructed from point counters.',
+  lapMapStats: '{lap} | Recorded: {recorded} | GPS: {gps} | Difference: {delta} | GPS coverage: {covered} / {duration} | {status}',
+  lapSelectionLabel: '{lap} | Recorded: {recorded} | GPS: {gps} | Lap difference: {delta} | Cumulative difference: {cumulative} | {status}',
+  checkpointLabel: 'End of lap {value}',
+  checkpointStats: '{checkpoint} | Recorded laps: {recorded} | GPS over the same laps: {gps} | Cumulative difference: {delta}',
+  checkpointUnavailable: 'Cumulative comparison unavailable: this lap or an earlier lap is incomplete or invalid. Individual lap values remain in the lap list; no difference is estimated.',
+  checkpointLocationUnavailable: 'Lap-end location unavailable. Any visible cursor marks the last available GPS sample, not a confirmed checkpoint.',
+  lapStatuses: {
+    complete: 'Complete',
+    partial: 'Incomplete GPS coverage',
+    'no-gps': 'No GPS coverage',
+    'invalid-time': 'Missing or invalid lap times',
+    'missing-distance': 'Recorded lap distance unavailable',
+    overlap: 'Overlapping or out-of-order lap',
+    'sample-end': 'Last sample known; actual lap finish unconfirmed',
+  },
   progress: 'Progress',
   separation: 'Separation',
   delta: 'Difference',
@@ -92,7 +159,8 @@ export const enTrackAnalysis: TrackAnalysisLocale = {
   splitTitle: 'Kilometer split comparison',
   splitTime: 'Track A GPS milestones, interpolated against Track B at the same timestamps. Missing intervals remain unavailable.',
   splitProgress: 'Track A GPS milestones compared at equal relative route progress. Each full-row difference is the overall raw-distance ratio by construction, not measured local drift.',
-  splitSingle: 'Recorded distance versus raw GPS at interpolated kilometer milestones.',
+  splitSingle: 'Per-point recorded distance versus raw GPS at interpolated GPS kilometer milestones. The overall card prefers the file summary, which may differ from the point counter.',
+  recordedTotalMismatch: 'Different distance sources: overall recorded total {recordedTotal}; point-based total at the table finish {pointTotal}. The table ends at {pointDelta}, while the overall card shows {totalDelta}. The remaining {offset} is a total-versus-point-counter difference, not a measured per-kilometer change. Point splits and cursors are not rescaled to force agreement.',
   summaryEstimate: 'Only a recorded total is available: per-split distance is a proportional estimate, not measured local drift.',
   gpsOnly: 'No independent recorded distance is available. GPS distance alone cannot establish device drift.',
   trackA: 'Track A',
@@ -146,6 +214,39 @@ export const zhTrackAnalysis: TrackAnalysisLocale = {
   rawPointsZoom: '当前视野内超过 {limit} 个 GPS 点，请放大地图查看原始点位。目前仅显示路线轮廓，未对采样点进行抽稀。',
   rawPointsVisible: '显示当前地图视野内的全部 {count} 个原始 GPS 点，未进行抽稀。',
   rawPointsEmpty: '当前视野内没有原始 GPS 点，请移回路线所在区域查看。',
+  watchDistance: '逐点里程',
+  gpsDistance: 'GPS 里程',
+  cursorSeparation: '游标间距',
+  watchCursorMeasured: '逐点游标使用文件保存的计数，以首个读数归零，不使用汇总值；该计数可能来自导出工具。缺失记录及超过 60 秒的时间缺口保持不可用。',
+  watchCursorSummary: '文件仅提供记录总里程。地图只显示 GPS 游标，不按比例估算逐点计数位置；逐点热力图不可用。',
+  watchCursorGpsOnly: '文件没有逐点里程计数，地图只显示 GPS 游标；逐点计数比对不可用。',
+  watchCursorNoCoverage: '共同里程范围内，有 GPS 坐标的逐点计数不足，地图只显示 GPS 游标。',
+  watchCursorGap: '此处逐点计数位置不可用：缺少参考或存在记录缺口。',
+  watchCursorTotalMismatch: '此文件的整体里程与逐点累计值不同。此游标跟随逐点计数，不跟随整体汇总值；具体差额见进阶表格上方说明。',
+  lapLabel: '第 {value} 圈',
+  lapStart: '记录圈次起点',
+  lapEnd: '记录圈次终点',
+  lapGpsStart: '首个可用 GPS 点，圈次起点不可用',
+  lapGpsEnd: '最后一个可用 GPS 点，圈次终点不可用',
+  lapPartialDistance: '仅已覆盖部分',
+  lapComparisonNote: '{total} 圈中有 {complete} 圈可完整比对。覆盖不全时，仅显示已采到的 GPS 距离，整圈差值保持不可用。累计差值到首个不完整或无效圈次为止；超过 60 秒的记录缺口不连线估算。',
+  lapTotalMismatch: '记录圈次合计 {laps}，整体记录为 {overall}，圈次比对不能代表整次运动的全部差异。',
+  lapsUnavailable: '文件没有记录圈次。仍可查看整体里程差异和 GPS 路线，但不能用逐点计数补造圈次终点。',
+  lapMapStats: '{lap} | 记录：{recorded} | GPS：{gps} | 差值：{delta} | GPS 时间覆盖：{covered} / {duration} | {status}',
+  lapSelectionLabel: '{lap} | 记录：{recorded} | GPS：{gps} | 单圈差值：{delta} | 累计差值：{cumulative} | {status}',
+  checkpointLabel: '第 {value} 圈终点',
+  checkpointStats: '{checkpoint} | 圈次记录累计：{recorded} | 同期 GPS 累计：{gps} | 累计差值：{delta}',
+  checkpointUnavailable: '此圈或之前圈次的数据不完整或无效，无法进行累计比对。单圈数值仍可在圈次列表中查看，不估算缺失的差值。',
+  checkpointLocationUnavailable: '无法确认圈次终点的位置。若地图仍有游标，它只表示最后一个可用 GPS 点，并非已确认的圈次终点。',
+  lapStatuses: {
+    complete: '完整',
+    partial: 'GPS 覆盖不全',
+    'no-gps': '无 GPS 覆盖',
+    'invalid-time': '圈次时间缺失或无效',
+    'missing-distance': '缺少圈次记录里程',
+    overlap: '圈次时间重叠或乱序',
+    'sample-end': '仅知最后采样时间，无法确认圈次终点',
+  },
   progress: '进度',
   separation: '点位间距',
   delta: '差值',
@@ -155,7 +256,8 @@ export const zhTrackAnalysis: TrackAnalysisLocale = {
   splitTitle: '逐公里分段比对',
   splitTime: '按轨迹 A 的 GPS 公里节点插值，与轨迹 B 同一时刻比对；记录空缺不作估算。',
   splitProgress: '按轨迹 A 的 GPS 公里节点与相同路线进度比对。完整公里行的差值按总里程比例生成，并非测得的局部漂移。',
-  splitSingle: '在插值后的公里节点，比对记录里程与原始 GPS 累加里程。',
+  splitSingle: '按 GPS 公里节点插值，比对逐点记录里程与 GPS 累加值。整体卡片优先使用文件汇总，可能与逐点累计值不同。',
+  recordedTotalMismatch: '两处使用了不同来源的里程：整体记录值为 {recordedTotal}，本表终点的逐点累计值为 {pointTotal}。因此表格累计差值为 {pointDelta}，整体卡片差值为 {totalDelta}。剩余的 {offset} 是整体与逐点累计值之间的差额，无法据此分配到某一公里。进阶分段和游标保持逐点记录，不会按比例缩放来强行对齐。',
   summaryEstimate: '文件仅提供汇总里程，分段数据为按比例分配的估算值，不能用于判断局部漂移。',
   gpsOnly: '文件没有独立记录的里程，仅凭 GPS 累加值无法确定设备漂移。',
   trackA: '轨迹 A',

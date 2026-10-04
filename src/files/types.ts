@@ -30,7 +30,7 @@ export interface Trackpoint {
   cadenceUnit?: 'steps/min' | 'cycles/min';
   /** Cumulative distance from the start of the activity in meters. */
   distance: number | null;
-  /** Original device distance before GPS fallback; null when the source has no measurement. */
+  /** Original file-provided distance before GPS fallback; null when the source has no value. */
   recordedDistance?: number | null;
   /** Instantaneous speed in meters per second (m/s). Null if unavailable. */
   speed?: number | null;
@@ -115,6 +115,14 @@ export interface ActivitySummary {
   totalMovingTime?: number | null;
 }
 
+export interface RecordedLap {
+  startTime: Date | null;
+  endTime: Date | null;
+  distance: number | null;
+  /** A last sample is not proof of the lap's actual end (for example, in TCX). */
+  endTimeBasis: 'recorded' | 'last-sample';
+}
+
 export interface Activity {
   /** Activity title or recorded name. */
   name: string;
@@ -125,6 +133,8 @@ export interface Activity {
   /** Original header totals, distinct from derived summary values. Null when unrecorded. */
   recordedDistance?: number | null;
   recordedDuration?: number | null;
+  /** Original lap records, not kilometer splits reconstructed from point counters. */
+  recordedLaps?: RecordedLap[];
   /** Source FIT metadata. Opaque fields may contain location, device IDs, or stale aggregates. */
   fit?: FITMetadata;
 }

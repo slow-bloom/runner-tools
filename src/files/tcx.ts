@@ -1,6 +1,7 @@
-import type { Activity, Trackpoint, TCXExportOptions, ActivitySummary, ParseTrackOptions } from './types.js';
+import type { Activity, Trackpoint, TCXExportOptions, ActivitySummary, ParseTrackOptions, RecordedLap } from './types.js';
 import {
   extractAllTags,
+  extractAttribute,
   getXmlChildTagValue,
   escapeXml,
   safeIsoTimestamp,
@@ -35,6 +36,7 @@ export function parseTCX(xmlText: string, options?: ParseTrackOptions): Activity
 
   // Aggregate all Laps if present
   const lapMatches = extractAllTags(xmlText, 'Lap');
+  const recordedLaps: RecordedLap[] = [];
   let lapSummary: Partial<ActivitySummary> | undefined;
 
   if (lapMatches.length > 0) {
@@ -62,6 +64,19 @@ export function parseTCX(xmlText: string, options?: ParseTrackOptions): Activity
       const rawCadence = cadVal && Number.isFinite(parseFloat(cadVal)) ? parseFloat(cadVal) : null;
       const c = rawCadence !== null && sport === 'running' && rawCadence > 0 && rawCadence < 120
         ? rawCadence * 2 : rawCadence;
+
+      const parseTime = (value: string | null): Date | null => {
+        const date = value ? new Date(value) : null;
+        return date && Number.isFinite(date.getTime()) ? date : null;
+      };
+      const samples = extractAllTags(lapXml, 'Trackpoint');
+      recordedLaps.push({
+        startTime: parseTime(extractAttribute(lap.openTag, 'StartTime')),
+        endTime: parseTime(getXmlChildTagValue(samples.at(-1)?.innerXml ?? '', 'Time')),
+        distance: distVal !== null && distVal !== '' && Number.isFinite(Number(distVal)) && Number(distVal) >= 0
+          ? Number(distVal) : null,
+        endTimeBasis: 'last-sample',
+      });
 
       if (distVal !== null || timeVal !== null) {
         hasLapMetrics = true;
@@ -168,6 +183,7 @@ export function parseTCX(xmlText: string, options?: ParseTrackOptions): Activity
     summary,
     recordedDistance: lapSummary?.distance ?? null,
     recordedDuration: lapSummary?.duration ?? null,
+    recordedLaps,
   };
 }
 

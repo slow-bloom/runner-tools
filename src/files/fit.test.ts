@@ -266,6 +266,10 @@ describe('FIT reader: independent protocol fixtures', () => {
 
   it('reads record, session, lap, enhanced fields and running dynamics in canonical units', () => {
     const activity = parseFIT(activityFixture());
+    expect(activity.recordedLaps).toEqual([{
+      startTime: date(start), endTime: date(start + 3),
+      distance: 4.2, endTimeBasis: 'recorded',
+    }]);
     expect(activity.points).toHaveLength(2);
     expect(activity.points[0]).toMatchObject({
       lat: 180 / 2147483648, lon: -180 / 2147483648, time: date(start),

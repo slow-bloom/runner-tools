@@ -674,6 +674,12 @@ export function parseFIT(input: ArrayBuffer | Uint8Array, options?: ParseTrackOp
     summary,
     recordedDistance: source.distance ?? null,
     recordedDuration: source.duration ?? null,
+    recordedLaps: laps.map((lap) => ({
+      startTime: dateFromTimestamp(nativeNumber(lap, 2)),
+      endTime: dateFromTimestamp(nativeNumber(lap, 253)),
+      distance: lap.summary?.distance ?? null,
+      endTimeBasis: 'recorded',
+    })),
     fit: {
       protocolVersion: decoded.protocolVersion,
       profileVersion: decoded.profileVersion,
