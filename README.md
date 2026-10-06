@@ -17,12 +17,12 @@ Experience these algorithms live in action on the web:
 - **[Age-Grading Calculator](https://apexrun.fit/tools/age-grading-calculator/)**
 - **[Running Efficiency Calculator](https://apexrun.fit/tools/running-efficiency-calculator/)**
 - **[Pace & Split Calculator](https://apexrun.fit/tools/pace-calculator/)**
-- **[Running Track File Converter](https://apexrun.fit/tools/running-file-converter/)** ([中文](https://www.apexrun.net/tools/running-file-converter/))
-- **[GPX & FIT Track Comparator](https://apexrun.fit/tools/gpx-fit-comparator/)** ([中文](https://www.apexrun.net/tools/gpx-fit-comparator/))
-- **[GPS Difference Analyzer](https://apexrun.fit/tools/gps-drift-analyzer/)** ([中文](https://www.apexrun.net/tools/gps-drift-analyzer/))
-- **[Cadence Metronome & Audio Generator](https://apexrun.fit/tools/cadence-metronome-generator/)** ([中文](https://www.apexrun.net/tools/cadence-metronome-generator/))
+- **[Running Track File Converter](https://apexrun.fit/tools/running-file-converter/)**
+- **[GPX & FIT Track Comparator](https://apexrun.fit/tools/gpx-fit-comparator/)**
+- **[GPS Difference Analyzer](https://apexrun.fit/tools/gps-drift-analyzer/)**
+- **[Cadence Metronome & Audio Generator](https://apexrun.fit/tools/cadence-metronome-generator/)**
 - **[Race Week Planner](https://apexrun.fit/tools/race-week-planner/)**
-- **[Runner Strength Timer](https://www.apexrun.net/tools/runner-strength-timer/)** (Chinese)
+- **[Runner Strength Timer](https://apexrun.fit/tools/runner-strength-timer/)**
 - **[Weekly Mileage Ramp-Up Calculator](https://apexrun.fit/tools/weekly-mileage-calculator/)**
 
 
