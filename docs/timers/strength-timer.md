@@ -49,14 +49,17 @@ instances with codes translated by `strengthTimerMessages.en` and `.zh`.
 ## Timeline and totals
 
 `buildStrengthTimeline` emits preparation, work, optional exercise rest,
-optional round rest, and a zero-duration completion stage. It intentionally
-retains the former website behavior: a final exercise's configured rest still
-occurs before round rest or completion. Set that exercise's rest to zero to omit
-it. `getStrengthWorkoutStats` derives every displayed total from the same
-timeline, eliminating separate website arithmetic.
+optional round rest, and a zero-duration completion stage. Every preset now
+defaults its final exercise's rest to zero, so the last movement leads directly
+into round recovery or completion. Explicit rest values in custom and imported
+workouts are preserved, including a nonzero final rest. `getStrengthWorkoutStats`
+derives every displayed total from the same timeline.
 
 Localized preset functions return editable copies; modifying one result never
-changes later presets. They are templates, not personalized medical advice.
+changes later presets. The glute routine includes separate left- and right-side
+clamshells, with cues identifying the working leg. The original `clamshell`
+catalog key remains available for existing callers. Presets are templates, not
+personalized medical advice.
 
 ## Timer state
 
@@ -81,6 +84,13 @@ speech adapter. It must be explicitly enabled from a user gesture. Visual timing
 continues if audio is unavailable or blocked. New cues cancel scheduled tones
 and speech before playing, and disabling cancels all pending audio.
 
-The website adapter uses `requestAnimationFrame`, retains wake-lock/fullscreen
-controls, and disables audio when permission fails. Storage, import, export,
-wake-lock, fullscreen and cue failures are visible instead of silently ignored.
+An interrupted or failed cue disables playback until the next explicit
+`enable()` call, rather than reporting the same failure at every countdown.
+
+The website adapter uses `requestAnimationFrame` and starts visual timing without
+waiting for audio activation. A labeled sound-test button resumes audio from a
+user gesture and plays a short tone. A blocked or stalled activation leaves a
+persistent retry control and phone-specific help. Web Audio does not have a
+standard permission-request dialog; iPhone Silent Mode, media volume, and output
+device settings must be changed by the user. Storage, import, export, wake-lock,
+fullscreen and cue failures remain visible.

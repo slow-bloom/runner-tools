@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Localized race-week templates and deterministic RFC 5545 calendar export with daylight-saving-aware local date arithmetic.
 
 ### Changed
+- Strength presets include left/right clamshells and default the final exercise's rest to zero, without changing saved or imported rest values. Failed audio cues disable playback until an explicit retry.
 - Privacy edits remove opaque FIT metadata from both activities and points, in addition to visible coordinates, with explicit warnings. Merges and GPS recalculation preserve record-level developer data while rebuilding source summaries.
 - Edited file summaries retain canonical FIT cadence and recompute running dynamics from retained samples.
 - Website synchronization now includes the worker and source maps alongside the existing browser bundle and license.

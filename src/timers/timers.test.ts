@@ -16,6 +16,29 @@ const workout: StrengthWorkout = {
 };
 
 describe('strength workout validation and serialization', () => {
+  it.each(['en', 'zh'] as const)('includes both clamshell sides in the %s catalog and glute preset', locale => {
+    const catalog = getStrengthExerciseCatalog(locale);
+    expect(catalog.clamshell_left).toMatchObject({ work: 35, rest: 15 });
+    expect(catalog.clamshell_right).toMatchObject({ work: 35, rest: 15 });
+    expect(catalog.clamshell_left.name).not.toBe(catalog.clamshell_right.name);
+    const exercises = getStrengthWorkoutPresets(locale).glute_legs.exercises;
+    expect(exercises.slice(-2).map(exercise => exercise.name)).toEqual([
+      catalog.clamshell_left.name, catalog.clamshell_right.name,
+    ]);
+  });
+
+  it.each(['en', 'zh'] as const)('defaults the last exercise rest to zero in every %s preset', locale => {
+    for (const preset of Object.values(getStrengthWorkoutPresets(locale))) {
+      expect(preset.exercises.at(-1)?.rest).toBe(0);
+      const timeline = buildStrengthTimeline(preset, locale);
+      for (const [index, stage] of timeline.entries()) {
+        if (stage.type === 'work' && stage.exerciseIndex === preset.exercises.length) {
+          expect(timeline[index + 1].type).toBe(stage.round < preset.rounds ? 'round_rest' : 'done');
+        }
+      }
+    }
+  });
+
   it('validates every localized preset and returns independent editable copies', () => {
     for (const locale of ['en', 'zh'] as const) {
       const presets = getStrengthWorkoutPresets(locale);
@@ -113,6 +136,17 @@ describe('strength workout timeline', () => {
     };
     expect(buildStrengthTimeline(noRest).map(stage => stage.type)).toEqual(['prep', 'work', 'work', 'done']);
     expect(getStrengthWorkoutStats(noRest).restSeconds).toBe(0);
+  });
+
+  it('preserves an explicitly configured final exercise rest for custom and imported workouts', () => {
+    const custom = {
+      ...workout,
+      exercises: [{ ...workout.exercises[0], rest: 2 }],
+    };
+    const imported = parseStrengthWorkout(JSON.stringify(custom));
+    expect(buildStrengthTimeline(imported).map(stage => stage.type)).toEqual([
+      'prep', 'work', 'rest', 'round_rest', 'work', 'rest', 'done',
+    ]);
   });
 
   it('localizes generated stage text', () => {
@@ -218,6 +252,44 @@ function audioHarness() {
 }
 
 describe('strength cue adapter', () => {
+  it('coalesces pending activation and does not re-enable after cancellation', async () => {
+    const harness = audioHarness();
+    harness.context.state = 'suspended';
+    let resolveResume!: () => void;
+    harness.context.resume.mockImplementation(() => new Promise<void>(resolve => { resolveResume = resolve; }));
+    const enabling = harness.player.enable();
+    expect(harness.player.enable()).toBe(enabling);
+    expect(harness.context.resume).toHaveBeenCalledOnce();
+    harness.player.disable();
+    harness.context.state = 'running';
+    resolveResume();
+    expect(await enabling).toBe(false);
+    expect(harness.player.enabled).toBe(false);
+    expect(await harness.player.enable()).toBe(true);
+  });
+
+  it('resumes an interrupted mobile context immediately from the enable gesture', async () => {
+    const harness = audioHarness();
+    harness.context.state = 'interrupted';
+    const enabling = harness.player.enable();
+    expect(harness.context.resume).toHaveBeenCalledOnce();
+    expect(await enabling).toBe(true);
+  });
+
+  it('stops repeated failed cues after a mobile interruption and supports an explicit retry', async () => {
+    const harness = audioHarness();
+    await harness.player.enable();
+    harness.context.state = 'interrupted';
+    harness.player.play([{ type: 'countdown', seconds: 2 }]);
+    expect(harness.onError).toHaveBeenCalledWith(expect.objectContaining({ code: 'audioResumeFailed' }));
+    expect(harness.player.enabled).toBe(false);
+    harness.player.play([{ type: 'countdown', seconds: 1 }]);
+    expect(harness.onError).toHaveBeenCalledOnce();
+    expect(await harness.player.enable()).toBe(true);
+    harness.player.play([{ type: 'countdown', seconds: 1 }]);
+    expect(harness.context.createOscillator).toHaveBeenCalledOnce();
+  });
+
   it('requires explicit enablement, coalesces enable calls and plays latest cues', async () => {
     const harness = audioHarness();
     const stage = buildStrengthTimeline(workout)[1];

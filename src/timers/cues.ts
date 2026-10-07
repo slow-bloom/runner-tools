@@ -107,7 +107,7 @@ export function createStrengthCuePlayer(options: StrengthCuePlayerOptions) {
           else if (cue.stage.type !== 'prep') tone(880, 'sine', 0.2, 0.4);
         }
       } catch (cause) {
-        cancel();
+        disable();
         options.onError(cause instanceof StrengthTimerError ? cause : new StrengthTimerError('cueFailed', '', { cause }));
       }
     },

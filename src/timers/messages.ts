@@ -36,8 +36,8 @@ export const strengthTimerMessages: Record<StrengthLocale, StrengthMessages> = {
       invalidClock: 'The timer clock moved backwards or is invalid. Restart the workout.',
       invalidAction: 'This timer action is not supported.',
       audioUnavailable: 'Audio is unavailable. The visual timer still works.',
-      audioResumeFailed: 'Audio could not start. Check browser sound permissions; the visual timer still works.',
-      cueFailed: 'A sound or voice cue could not play. The visual timer still works.',
+      audioResumeFailed: 'Sound is paused by the browser. Tap Enable / test sound to retry; the visual timer keeps running.',
+      cueFailed: 'A sound or voice cue could not play. Tap Enable / test sound to retry; the visual timer keeps running.',
     },
   },
   zh: {
@@ -59,8 +59,8 @@ export const strengthTimerMessages: Record<StrengthLocale, StrengthMessages> = {
       invalidClock: '计时器时钟异常，请重新开始训练。',
       invalidAction: '暂不支持这个计时操作。',
       audioUnavailable: '当前浏览器无法播放提示音，画面计时仍可正常使用。',
-      audioResumeFailed: '提示音未能启动，请检查浏览器声音权限。画面计时仍可正常使用。',
-      cueFailed: '音效或语音提示未能播放，画面计时仍可正常使用。',
+      audioResumeFailed: '浏览器暂停了声音，请点「开启 / 试听声音」重试。画面计时仍在继续。',
+      cueFailed: '提示音未能播放，请点「开启 / 试听声音」重试。画面计时仍在继续。',
     },
   },
 };
