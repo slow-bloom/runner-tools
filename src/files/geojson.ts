@@ -19,38 +19,62 @@ export function toGeoJSON(
   const name =
     options?.name ||
     (!Array.isArray(activityOrPoints) && activityOrPoints.name ? activityOrPoints.name : defaultName);
+  const connectSegments = options?.connectSegments ?? false;
   const includeElevation = options?.includeElevationInCoordinates ?? true;
 
-  const coordinates: Array<[number, number] | [number, number, number]> = [];
+  const validPoints = points.filter(
+    (pt) => pt.lat !== null && pt.lon !== null && Number.isFinite(pt.lat) && Number.isFinite(pt.lon)
+  );
+
+  const segments: Trackpoint[][] = [];
+  if (connectSegments) {
+    segments.push(validPoints);
+  } else {
+    let currentSeg: Trackpoint[] = [];
+    let currentSegIdx: number | undefined = undefined;
+    for (const pt of validPoints) {
+      const segIdx = pt.segmentIndex ?? 0;
+      if (currentSegIdx !== undefined && segIdx !== currentSegIdx) {
+        if (currentSeg.length > 0) {
+          segments.push(currentSeg);
+          currentSeg = [];
+        }
+      }
+      currentSegIdx = segIdx;
+      currentSeg.push(pt);
+    }
+    if (currentSeg.length > 0) {
+      segments.push(currentSeg);
+    }
+  }
+
+  const formatCoord = (pt: Trackpoint): [number, number] | [number, number, number] =>
+    includeElevation && pt.ele !== null && Number.isFinite(pt.ele)
+      ? [pt.lon!, pt.lat!, pt.ele]
+      : [pt.lon!, pt.lat!];
+
+  const isMultiSegment = segments.length > 1;
+  const geometryType = isMultiSegment ? 'MultiLineString' : 'LineString';
+  const coordinates = isMultiSegment
+    ? segments.map((seg) => seg.map(formatCoord))
+    : validPoints.map(formatCoord);
+
   const timestamps: Array<string | null> = [];
   const heartrates: Array<number | null> = [];
   const cadences: Array<number | null> = [];
   const elevations: Array<number | null> = [];
   const distances: Array<number | null> = [];
 
-  for (const pt of points) {
-    if (
-      pt.lat !== null &&
-      pt.lon !== null &&
-      Number.isFinite(pt.lat) &&
-      Number.isFinite(pt.lon)
-    ) {
-      if (includeElevation && pt.ele !== null && Number.isFinite(pt.ele)) {
-        coordinates.push([pt.lon, pt.lat, pt.ele]);
-      } else {
-        coordinates.push([pt.lon, pt.lat]);
-      }
-
-      timestamps.push(
-        pt.time instanceof Date && !isNaN(pt.time.getTime())
-          ? pt.time.toISOString()
-          : null
-      );
-      heartrates.push(pt.hr ?? null);
-      cadences.push(pt.cad ?? null);
-      elevations.push(pt.ele ?? null);
-      distances.push(pt.distance ?? null);
-    }
+  for (const pt of validPoints) {
+    timestamps.push(
+      pt.time instanceof Date && !isNaN(pt.time.getTime())
+        ? pt.time.toISOString()
+        : null
+    );
+    heartrates.push(pt.hr ?? null);
+    cadences.push(pt.cad ?? null);
+    elevations.push(pt.ele ?? null);
+    distances.push(pt.distance ?? null);
   }
 
   return {
@@ -59,8 +83,8 @@ export function toGeoJSON(
       {
         type: 'Feature',
         geometry: {
-          type: 'LineString',
-          coordinates,
+          type: geometryType,
+          coordinates: coordinates as any,
         },
         properties: {
           name,

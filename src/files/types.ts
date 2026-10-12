@@ -54,6 +54,8 @@ export interface Trackpoint {
   sport?: string;
   /** Source FIT fields. Remove when stripping GPS: opaque fields can contain location data. */
   fit?: FITRecordMetadata;
+  /** Zero-based track segment index for multi-segment activities. */
+  segmentIndex?: number;
 }
 
 export interface ActivitySummary {
@@ -222,6 +224,8 @@ export interface GPXExportOptions {
   creator?: string;
   /** Include Garmin TrackPointExtension (gpxtpx) for HR and Cadence. Defaults to true. */
   includeExtensions?: boolean;
+  /** Connect disjoint track segments into a single continuous trkseg. Defaults to false. */
+  connectSegments?: boolean;
   /** Optional language or custom dictionary override. */
   locale?: LocaleInput;
 }
@@ -235,6 +239,8 @@ export interface TCXExportOptions {
   sport?: string;
   /** Optional recorded total calories in kcal. Defaults to 0 (unknown/unmeasured). */
   calories?: number;
+  /** Connect disjoint track segments into a single continuous track. Defaults to false. */
+  connectSegments?: boolean;
   /** Optional language or custom dictionary override. */
   locale?: LocaleInput;
 }
@@ -246,6 +252,8 @@ export interface KMLExportOptions {
   lineColor?: string;
   /** Track line stroke width in pixels. Defaults to 4. */
   lineWidth?: number;
+  /** Connect disjoint track segments into a single continuous LineString. Defaults to false. */
+  connectSegments?: boolean;
   /** Optional language or custom dictionary override. */
   locale?: LocaleInput;
 }
@@ -255,8 +263,10 @@ export interface GeoJSONFeatureCollection {
   features: Array<{
     type: 'Feature';
     geometry: {
-      type: 'LineString';
-      coordinates: Array<[number, number] | [number, number, number]>;
+      type: 'LineString' | 'MultiLineString';
+      coordinates:
+        | Array<[number, number] | [number, number, number]>
+        | Array<Array<[number, number] | [number, number, number]>>;
     };
     properties: {
       name: string;
@@ -275,6 +285,8 @@ export interface GeoJSONExportOptions {
   name?: string;
   /** Include elevation coordinate as 3rd coordinate tuple [lon, lat, ele]. Defaults to true. */
   includeElevationInCoordinates?: boolean;
+  /** Connect disjoint track segments into a single LineString. Defaults to false. */
+  connectSegments?: boolean;
   /** Optional language or custom dictionary override. */
   locale?: LocaleInput;
 }

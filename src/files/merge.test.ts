@@ -244,4 +244,29 @@ describe('Activity Merge', () => {
     expect(merged.summary.duration).toBe(20);
     expect(merged.summary.totalElapsedTime).toBe(20);
   });
+
+  it('assigns sequential segmentIndex to each activity when merging', () => {
+    const act1: Activity = {
+      name: 'Leg 1',
+      points: [
+        { lat: 10, lon: 10, ele: 0, time: new Date('2026-03-01T08:00:00Z'), hr: null, cad: null, distance: 0 },
+        { lat: 10.01, lon: 10.01, ele: 0, time: new Date('2026-03-01T08:05:00Z'), hr: null, cad: null, distance: 500 },
+      ],
+      summary: calculateActivitySummary([]),
+    };
+    const act2: Activity = {
+      name: 'Leg 2',
+      points: [
+        { lat: 20, lon: 20, ele: 0, time: new Date('2026-03-01T08:15:00Z'), hr: null, cad: null, distance: 0 },
+        { lat: 20.01, lon: 20.01, ele: 0, time: new Date('2026-03-01T08:20:00Z'), hr: null, cad: null, distance: 600 },
+      ],
+      summary: calculateActivitySummary([]),
+    };
+
+    const merged = mergeActivities([act1, act2]);
+    expect(merged.points[0].segmentIndex).toBe(0);
+    expect(merged.points[1].segmentIndex).toBe(0);
+    expect(merged.points[2].segmentIndex).toBe(1);
+    expect(merged.points[3].segmentIndex).toBe(1);
+  });
 });

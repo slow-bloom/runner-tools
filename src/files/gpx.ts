@@ -36,10 +36,27 @@ export function parseGPX(xmlText: string, options?: ParseTrackOptions): Activity
   const sport = rawSport === 'cycling' || rawSport === 'biking' ? 'cycling'
     : rawSport === 'walking' || rawSport === 'hiking' ? rawSport : 'running';
 
-  const trkptMatches = extractAllTags(xmlText, 'trkpt');
+  const trksegMatches = extractAllTags(xmlText, 'trkseg');
+  const trkptGroups: Array<{ points: Array<ReturnType<typeof extractAllTags>[number]>; segmentIndex: number }> = [];
+
+  if (trksegMatches.length > 0) {
+    trksegMatches.forEach((segMatch, idx) => {
+      trkptGroups.push({
+        points: extractAllTags(segMatch.innerXml, 'trkpt'),
+        segmentIndex: idx,
+      });
+    });
+  } else {
+    trkptGroups.push({
+      points: extractAllTags(xmlText, 'trkpt'),
+      segmentIndex: 0,
+    });
+  }
+
   const rawPoints: Trackpoint[] = [];
 
-  for (const match of trkptMatches) {
+  for (const group of trkptGroups) {
+    for (const match of group.points) {
     const latStr = extractAttribute(match.openTag, 'lat');
     const lonStr = extractAttribute(match.openTag, 'lon');
 
@@ -96,8 +113,10 @@ export function parseGPX(xmlText: string, options?: ParseTrackOptions): Activity
       recordedDistance: null,
       speed,
       temp,
+      segmentIndex: group.segmentIndex,
       ...(sport === 'cycling' ? { sport } : {}),
     });
+    }
   }
 
   // Calculate cumulative distances
@@ -137,6 +156,30 @@ export function serializeToGPX(
 
   const startTimeIso = safeIsoTimestamp(points[0]?.time);
 
+  const connectSegments = options?.connectSegments ?? false;
+  const segments: Trackpoint[][] = [];
+  if (connectSegments) {
+    segments.push(points);
+  } else {
+    let currentSeg: Trackpoint[] = [];
+    let currentSegIdx: number | undefined = undefined;
+    for (const pt of points) {
+      const segIdx = pt.segmentIndex ?? 0;
+      if (currentSegIdx !== undefined && segIdx !== currentSegIdx) {
+        if (currentSeg.length > 0) {
+          segments.push(currentSeg);
+          currentSeg = [];
+        }
+      }
+      currentSegIdx = segIdx;
+      currentSeg.push(pt);
+    }
+    if (currentSeg.length > 0) {
+      segments.push(currentSeg);
+    }
+  }
+  if (segments.length === 0) segments.push([]);
+
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="${escapeXml(creator)}" xmlns="http://www.topografix.com/GPX/1/1" xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd http://www.garmin.com/xmlschemas/TrackPointExtension/v1 http://www.garmin.com/xmlschemas/TrackPointExtensionv1.xsd">
   <metadata>
@@ -145,67 +188,73 @@ export function serializeToGPX(
   </metadata>
   <trk>
     <name>${escapeXml(activityName)}</name>
-    <type>${escapeXml(sport)}</type>
+    <type>${escapeXml(sport)}</type>`;
+
+  for (const seg of segments) {
+    xml += `
     <trkseg>`;
 
-  for (const pt of points) {
-    if (
-      pt.lat === null ||
-      pt.lon === null ||
-      !Number.isFinite(pt.lat) ||
-      !Number.isFinite(pt.lon)
-    ) {
-      continue;
-    }
+    for (const pt of seg) {
+      if (
+        pt.lat === null ||
+        pt.lon === null ||
+        !Number.isFinite(pt.lat) ||
+        !Number.isFinite(pt.lon)
+      ) {
+        continue;
+      }
 
-    const latStr = pt.lat.toFixed(6);
-    const lonStr = pt.lon.toFixed(6);
+      const latStr = pt.lat.toFixed(6);
+      const lonStr = pt.lon.toFixed(6);
 
-    xml += `
+      xml += `
       <trkpt lat="${latStr}" lon="${lonStr}">`;
 
-    if (pt.ele !== null && Number.isFinite(pt.ele)) {
-      xml += `
+      if (pt.ele !== null && Number.isFinite(pt.ele)) {
+        xml += `
         <ele>${pt.ele.toFixed(2)}</ele>`;
-    }
+      }
 
-    if (pt.time instanceof Date && !isNaN(pt.time.getTime())) {
-      xml += `
+      if (pt.time instanceof Date && !isNaN(pt.time.getTime())) {
+        xml += `
         <time>${pt.time.toISOString()}</time>`;
-    }
+      }
 
-    if (pt.speed !== undefined && pt.speed !== null && Number.isFinite(pt.speed)) {
-      xml += `
+      if (pt.speed !== undefined && pt.speed !== null && Number.isFinite(pt.speed)) {
+        xml += `
         <speed>${pt.speed.toFixed(2)}</speed>`;
-    }
+      }
 
-    if (includeExtensions && (pt.hr !== null || pt.cad !== null || (pt.temp !== undefined && pt.temp !== null))) {
-      xml += `
+      if (includeExtensions && (pt.hr !== null || pt.cad !== null || (pt.temp !== undefined && pt.temp !== null))) {
+        xml += `
         <extensions>
           <gpxtpx:TrackPointExtension>`;
-      if (pt.hr !== null && Number.isFinite(pt.hr)) {
-        xml += `
+        if (pt.hr !== null && Number.isFinite(pt.hr)) {
+          xml += `
             <gpxtpx:hr>${Math.round(pt.hr)}</gpxtpx:hr>`;
-      }
-      if (pt.cad !== null && Number.isFinite(pt.cad)) {
-        xml += `
+        }
+        if (pt.cad !== null && Number.isFinite(pt.cad)) {
+          xml += `
             <gpxtpx:cad>${Math.round(pt.cad)}</gpxtpx:cad>`;
-      }
-      if (pt.temp !== undefined && pt.temp !== null && Number.isFinite(pt.temp)) {
-        xml += `
+        }
+        if (pt.temp !== undefined && pt.temp !== null && Number.isFinite(pt.temp)) {
+          xml += `
             <gpxtpx:atemp>${Math.round(pt.temp)}</gpxtpx:atemp>`;
-      }
-      xml += `
+        }
+        xml += `
           </gpxtpx:TrackPointExtension>
         </extensions>`;
+      }
+
+      xml += `
+      </trkpt>`;
     }
 
     xml += `
-      </trkpt>`;
+    </trkseg>`;
   }
 
   xml += `
-    </trkseg>
   </trk>
 </gpx>`;
 

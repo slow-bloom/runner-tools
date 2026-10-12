@@ -64,6 +64,9 @@ export function calculateMovingTime(points: Trackpoint[], options?: MovingTimeOp
     const curr = points[i];
 
     if (!prev.time || !curr.time) continue;
+    if (curr.segmentIndex !== undefined && prev.segmentIndex !== undefined && curr.segmentIndex !== prev.segmentIndex) {
+      continue;
+    }
 
     const diff = (curr.time.getTime() - prev.time.getTime()) / 1000;
 
@@ -217,7 +220,12 @@ export function normalizeTrackDistances(
     if (forceGps) {
       if (idx > 0) {
         const prev = points[idx - 1];
+        const isNewSegment =
+          pt.segmentIndex !== undefined &&
+          prev.segmentIndex !== undefined &&
+          pt.segmentIndex !== prev.segmentIndex;
         if (
+          !isNewSegment &&
           prev.lat !== null &&
           prev.lon !== null &&
           pt.lat !== null &&
@@ -243,7 +251,12 @@ export function normalizeTrackDistances(
         // Fallback to Haversine
         if (idx > 0) {
           const prev = points[idx - 1];
+          const isNewSegment =
+            pt.segmentIndex !== undefined &&
+            prev.segmentIndex !== undefined &&
+            pt.segmentIndex !== prev.segmentIndex;
           if (
+            !isNewSegment &&
             prev.lat !== null &&
             prev.lon !== null &&
             pt.lat !== null &&

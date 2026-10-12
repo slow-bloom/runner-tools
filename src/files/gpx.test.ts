@@ -120,4 +120,43 @@ describe('GPX Parser & Serializer', () => {
     const serializedZh = serializeToGPX([{ lat: 39.9, lon: 116.4, ele: 0, time: null, hr: null, cad: null, distance: 0 }], { locale: 'zh' });
     expect(serializedZh).toContain('<name>运动记录</name>');
   });
+
+  it('parses multiple trkseg elements into distinct segmentIndex values', () => {
+    const multiSegGpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1">
+  <trk>
+    <trkseg>
+      <trkpt lat="39.9" lon="116.4"><time>2026-03-01T08:00:00Z</time></trkpt>
+      <trkpt lat="39.91" lon="116.41"><time>2026-03-01T08:01:00Z</time></trkpt>
+    </trkseg>
+    <trkseg>
+      <trkpt lat="40.0" lon="116.5"><time>2026-03-01T08:10:00Z</time></trkpt>
+      <trkpt lat="40.01" lon="116.51"><time>2026-03-01T08:11:00Z</time></trkpt>
+    </trkseg>
+  </trk>
+</gpx>`;
+    const activity = parseGPX(multiSegGpx);
+    expect(activity.points).toHaveLength(4);
+    expect(activity.points[0].segmentIndex).toBe(0);
+    expect(activity.points[1].segmentIndex).toBe(0);
+    expect(activity.points[2].segmentIndex).toBe(1);
+    expect(activity.points[3].segmentIndex).toBe(1);
+  });
+
+  it('serializes multi-segment points into separate <trkseg> tags by default, and single <trkseg> when connectSegments is true', () => {
+    const points = [
+      { lat: 39.9, lon: 116.4, ele: 0, time: null, hr: null, cad: null, distance: 0, segmentIndex: 0 },
+      { lat: 39.91, lon: 116.41, ele: 0, time: null, hr: null, cad: null, distance: 100, segmentIndex: 0 },
+      { lat: 40.0, lon: 116.5, ele: 0, time: null, hr: null, cad: null, distance: 100, segmentIndex: 1 },
+      { lat: 40.01, lon: 116.51, ele: 0, time: null, hr: null, cad: null, distance: 200, segmentIndex: 1 },
+    ];
+
+    const xmlDisjoint = serializeToGPX(points);
+    const trksegMatches = xmlDisjoint.match(/<trkseg>/g);
+    expect(trksegMatches).toHaveLength(2);
+
+    const xmlConnected = serializeToGPX(points, { connectSegments: true });
+    const connectedMatches = xmlConnected.match(/<trkseg>/g);
+    expect(connectedMatches).toHaveLength(1);
+  });
 });

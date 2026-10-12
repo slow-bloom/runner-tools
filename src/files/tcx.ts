@@ -102,76 +102,95 @@ export function parseTCX(xmlText: string, options?: ParseTrackOptions): Activity
     }
   }
 
-  const trkptMatches = extractAllTags(xmlText, 'Trackpoint');
+  const trackMatches = extractAllTags(xmlText, 'Track');
+  const trackGroups: Array<{ points: Array<ReturnType<typeof extractAllTags>[number]>; segmentIndex: number }> = [];
+
+  if (trackMatches.length > 0) {
+    trackMatches.forEach((trackMatch, idx) => {
+      trackGroups.push({
+        points: extractAllTags(trackMatch.innerXml, 'Trackpoint'),
+        segmentIndex: idx,
+      });
+    });
+  } else {
+    trackGroups.push({
+      points: extractAllTags(xmlText, 'Trackpoint'),
+      segmentIndex: 0,
+    });
+  }
+
   const rawPoints: Trackpoint[] = [];
 
-  for (const match of trkptMatches) {
-    const inner = match.innerXml;
+  for (const group of trackGroups) {
+    for (const match of group.points) {
+      const inner = match.innerXml;
 
-    const latVal = getXmlChildTagValue(inner, 'LatitudeDegrees');
-    const lonVal = getXmlChildTagValue(inner, 'LongitudeDegrees');
+      const latVal = getXmlChildTagValue(inner, 'LatitudeDegrees');
+      const lonVal = getXmlChildTagValue(inner, 'LongitudeDegrees');
 
-    const lat = latVal !== null && Number.isFinite(parseFloat(latVal)) ? parseFloat(latVal) : null;
-    const lon = lonVal !== null && Number.isFinite(parseFloat(lonVal)) ? parseFloat(lonVal) : null;
+      const lat = latVal !== null && Number.isFinite(parseFloat(latVal)) ? parseFloat(latVal) : null;
+      const lon = lonVal !== null && Number.isFinite(parseFloat(lonVal)) ? parseFloat(lonVal) : null;
 
-    const eleVal = getXmlChildTagValue(inner, 'AltitudeMeters');
-    const ele = eleVal !== null && Number.isFinite(parseFloat(eleVal)) ? parseFloat(eleVal) : null;
+      const eleVal = getXmlChildTagValue(inner, 'AltitudeMeters');
+      const ele = eleVal !== null && Number.isFinite(parseFloat(eleVal)) ? parseFloat(eleVal) : null;
 
-    const distVal = getXmlChildTagValue(inner, 'DistanceMeters');
-    const distance = distVal !== null && Number.isFinite(parseFloat(distVal)) ? parseFloat(distVal) : null;
+      const distVal = getXmlChildTagValue(inner, 'DistanceMeters');
+      const distance = distVal !== null && Number.isFinite(parseFloat(distVal)) ? parseFloat(distVal) : null;
 
-    const timeVal = getXmlChildTagValue(inner, 'Time');
-    let time: Date | null = null;
-    if (timeVal) {
-      const parsedDate = new Date(timeVal);
-      if (!isNaN(parsedDate.getTime())) {
-        time = parsedDate;
+      const timeVal = getXmlChildTagValue(inner, 'Time');
+      let time: Date | null = null;
+      if (timeVal) {
+        const parsedDate = new Date(timeVal);
+        if (!isNaN(parsedDate.getTime())) {
+          time = parsedDate;
+        }
       }
-    }
 
-    // Heart rate is nested inside <HeartRateBpm><Value>...</Value></HeartRateBpm>
-    let hr: number | null = null;
-    const hrBlock = getXmlChildTagValue(inner, 'HeartRateBpm');
-    if (hrBlock) {
-      const val = getXmlChildTagValue(hrBlock, 'Value');
-      if (val !== null && Number.isFinite(parseInt(val, 10))) {
-        hr = parseInt(val, 10);
+      // Heart rate is nested inside <HeartRateBpm><Value>...</Value></HeartRateBpm>
+      let hr: number | null = null;
+      const hrBlock = getXmlChildTagValue(inner, 'HeartRateBpm');
+      if (hrBlock) {
+        const val = getXmlChildTagValue(hrBlock, 'Value');
+        if (val !== null && Number.isFinite(parseInt(val, 10))) {
+          hr = parseInt(val, 10);
+        }
       }
-    }
-    if (hr === null) {
-      // Fallback if directly expressed as <hr> or <Value>
-      const directVal = getXmlChildTagValue(inner, 'hr') || getXmlChildTagValue(inner, 'Value');
-      if (directVal !== null && Number.isFinite(parseInt(directVal, 10))) {
-        hr = parseInt(directVal, 10);
+      if (hr === null) {
+        // Fallback if directly expressed as <hr> or <Value>
+        const directVal = getXmlChildTagValue(inner, 'hr') || getXmlChildTagValue(inner, 'Value');
+        if (directVal !== null && Number.isFinite(parseInt(directVal, 10))) {
+          hr = parseInt(directVal, 10);
+        }
       }
+
+      // Cadence
+      const cadVal =
+        getXmlChildTagValue(inner, 'Cadence') ||
+        getXmlChildTagValue(inner, 'RunCadence');
+      const cad = cadVal !== null && Number.isFinite(parseFloat(cadVal)) ? parseFloat(cadVal) : null;
+
+      // Speed or Watts inside Extensions (TPX)
+      const speedVal = getXmlChildTagValue(inner, 'Speed');
+      const speed = speedVal !== null && Number.isFinite(parseFloat(speedVal)) ? parseFloat(speedVal) : null;
+
+      const wattsVal = getXmlChildTagValue(inner, 'Watts');
+      const power = wattsVal !== null && Number.isFinite(parseFloat(wattsVal)) ? parseFloat(wattsVal) : null;
+
+      rawPoints.push({
+        lat,
+        lon,
+        ele,
+        time,
+        hr,
+        cad,
+        distance,
+        recordedDistance: distance,
+        speed,
+        power,
+        segmentIndex: group.segmentIndex,
+        ...(sport !== 'running' ? { sport } : {}),
+      });
     }
-
-    // Cadence
-    const cadVal =
-      getXmlChildTagValue(inner, 'Cadence') ||
-      getXmlChildTagValue(inner, 'RunCadence');
-    const cad = cadVal !== null && Number.isFinite(parseFloat(cadVal)) ? parseFloat(cadVal) : null;
-
-    // Speed or Watts inside Extensions (TPX)
-    const speedVal = getXmlChildTagValue(inner, 'Speed');
-    const speed = speedVal !== null && Number.isFinite(parseFloat(speedVal)) ? parseFloat(speedVal) : null;
-
-    const wattsVal = getXmlChildTagValue(inner, 'Watts');
-    const power = wattsVal !== null && Number.isFinite(parseFloat(wattsVal)) ? parseFloat(wattsVal) : null;
-
-    rawPoints.push({
-      lat,
-      lon,
-      ele,
-      time,
-      hr,
-      cad,
-      distance,
-      recordedDistance: distance,
-      speed,
-      power,
-      ...(sport !== 'running' ? { sport } : {}),
-    });
   }
 
   const normalizedPoints = normalizeTrackDistances(rawPoints);
@@ -221,80 +240,110 @@ export function serializeToTCX(
         <DistanceMeters>${totalDistMeters.toFixed(1)}</DistanceMeters>
         <Calories>${calories}</Calories>
         <Intensity>Active</Intensity>
-        <TriggerMethod>Manual</TriggerMethod>
+        <TriggerMethod>Manual</TriggerMethod>`;
+
+  const connectSegments = options?.connectSegments ?? false;
+  const segments: Trackpoint[][] = [];
+  if (connectSegments) {
+    segments.push(points);
+  } else {
+    let currentSeg: Trackpoint[] = [];
+    let currentSegIdx: number | undefined = undefined;
+    for (const pt of points) {
+      const segIdx = pt.segmentIndex ?? 0;
+      if (currentSegIdx !== undefined && segIdx !== currentSegIdx) {
+        if (currentSeg.length > 0) {
+          segments.push(currentSeg);
+          currentSeg = [];
+        }
+      }
+      currentSegIdx = segIdx;
+      currentSeg.push(pt);
+    }
+    if (currentSeg.length > 0) {
+      segments.push(currentSeg);
+    }
+  }
+  if (segments.length === 0) segments.push([]);
+
+  for (const seg of segments) {
+    xml += `
         <Track>`;
 
-  for (const pt of points) {
-    const timeIso =
-      pt.time instanceof Date && !isNaN(pt.time.getTime())
-        ? pt.time.toISOString()
-        : startTimeIso;
+    for (const pt of seg) {
+      const timeIso =
+        pt.time instanceof Date && !isNaN(pt.time.getTime())
+          ? pt.time.toISOString()
+          : startTimeIso;
 
-    xml += `
+      xml += `
           <Trackpoint>
             <Time>${timeIso}</Time>`;
 
-    if (
-      pt.lat !== null &&
-      pt.lon !== null &&
-      Number.isFinite(pt.lat) &&
-      Number.isFinite(pt.lon)
-    ) {
-      xml += `
+      if (
+        pt.lat !== null &&
+        pt.lon !== null &&
+        Number.isFinite(pt.lat) &&
+        Number.isFinite(pt.lon)
+      ) {
+        xml += `
             <Position>
               <LatitudeDegrees>${pt.lat.toFixed(6)}</LatitudeDegrees>
               <LongitudeDegrees>${pt.lon.toFixed(6)}</LongitudeDegrees>
             </Position>`;
-    }
+      }
 
-    if (pt.ele !== null && Number.isFinite(pt.ele)) {
-      xml += `
+      if (pt.ele !== null && Number.isFinite(pt.ele)) {
+        xml += `
             <AltitudeMeters>${pt.ele.toFixed(2)}</AltitudeMeters>`;
-    }
+      }
 
-    if (pt.distance !== null && Number.isFinite(pt.distance)) {
-      xml += `
+      if (pt.distance !== null && Number.isFinite(pt.distance)) {
+        xml += `
             <DistanceMeters>${pt.distance.toFixed(1)}</DistanceMeters>`;
-    }
+      }
 
-    if (pt.hr !== null && Number.isFinite(pt.hr)) {
-      xml += `
+      if (pt.hr !== null && Number.isFinite(pt.hr)) {
+        xml += `
             <HeartRateBpm>
               <Value>${Math.round(pt.hr)}</Value>
             </HeartRateBpm>`;
-    }
+      }
 
-    if (pt.cad !== null && Number.isFinite(pt.cad)) {
-      xml += `
+      if (pt.cad !== null && Number.isFinite(pt.cad)) {
+        xml += `
             <Cadence>${Math.round(pt.cad)}</Cadence>`;
-    }
+      }
 
-    if (
-      (pt.speed !== undefined && pt.speed !== null && Number.isFinite(pt.speed)) ||
-      (pt.power !== undefined && pt.power !== null && Number.isFinite(pt.power))
-    ) {
-      xml += `
+      if (
+        (pt.speed !== undefined && pt.speed !== null && Number.isFinite(pt.speed)) ||
+        (pt.power !== undefined && pt.power !== null && Number.isFinite(pt.power))
+      ) {
+        xml += `
             <Extensions>
               <TPX xmlns="http://www.garmin.com/xmlschemas/ActivityExtension/v2">`;
-      if (pt.speed !== undefined && pt.speed !== null && Number.isFinite(pt.speed)) {
-        xml += `
+        if (pt.speed !== undefined && pt.speed !== null && Number.isFinite(pt.speed)) {
+          xml += `
                 <Speed>${pt.speed.toFixed(2)}</Speed>`;
-      }
-      if (pt.power !== undefined && pt.power !== null && Number.isFinite(pt.power)) {
-        xml += `
+        }
+        if (pt.power !== undefined && pt.power !== null && Number.isFinite(pt.power)) {
+          xml += `
                 <Watts>${Math.round(pt.power)}</Watts>`;
-      }
-      xml += `
+        }
+        xml += `
               </TPX>
             </Extensions>`;
+      }
+
+      xml += `
+          </Trackpoint>`;
     }
 
     xml += `
-          </Trackpoint>`;
+        </Track>`;
   }
 
   xml += `
-        </Track>
       </Lap>
     </Activity>
   </Activities>

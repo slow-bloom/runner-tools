@@ -89,18 +89,63 @@ export function serializeToKML(
   const lineColor = options?.lineColor || 'ff045de8';
   const lineWidth = options?.lineWidth ?? 4;
 
-  let coordsStr = '';
-  for (const pt of points) {
-    if (
-      pt.lat !== null &&
-      pt.lon !== null &&
-      Number.isFinite(pt.lat) &&
-      Number.isFinite(pt.lon)
-    ) {
-      const ele = pt.ele !== null && Number.isFinite(pt.ele) ? pt.ele.toFixed(2) : '0';
-      coordsStr += `${pt.lon.toFixed(6)},${pt.lat.toFixed(6)},${ele} `;
+  const connectSegments = options?.connectSegments ?? false;
+  const segments: Trackpoint[][] = [];
+  if (connectSegments) {
+    segments.push(points);
+  } else {
+    let currentSeg: Trackpoint[] = [];
+    let currentSegIdx: number | undefined = undefined;
+    for (const pt of points) {
+      const segIdx = pt.segmentIndex ?? 0;
+      if (currentSegIdx !== undefined && segIdx !== currentSegIdx) {
+        if (currentSeg.length > 0) {
+          segments.push(currentSeg);
+          currentSeg = [];
+        }
+      }
+      currentSegIdx = segIdx;
+      currentSeg.push(pt);
+    }
+    if (currentSeg.length > 0) {
+      segments.push(currentSeg);
     }
   }
+
+  const formatCoords = (pts: Trackpoint[]): string => {
+    let str = '';
+    for (const pt of pts) {
+      if (
+        pt.lat !== null &&
+        pt.lon !== null &&
+        Number.isFinite(pt.lat) &&
+        Number.isFinite(pt.lon)
+      ) {
+        const ele = pt.ele !== null && Number.isFinite(pt.ele) ? pt.ele.toFixed(2) : '0';
+        str += `${pt.lon.toFixed(6)},${pt.lat.toFixed(6)},${ele} `;
+      }
+    }
+    return str.trim();
+  };
+
+  const isMultiSegment = segments.length > 1;
+  const geometryXml = isMultiSegment
+    ? `      <MultiGeometry>
+${segments.map(seg => `        <LineString>
+          <tessellate>1</tessellate>
+          <altitudeMode>clampToGround</altitudeMode>
+          <coordinates>
+            ${formatCoords(seg)}
+          </coordinates>
+        </LineString>`).join('\n')}
+      </MultiGeometry>`
+    : `      <LineString>
+        <tessellate>1</tessellate>
+        <altitudeMode>clampToGround</altitudeMode>
+        <coordinates>
+          ${formatCoords(points)}
+        </coordinates>
+      </LineString>`;
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
@@ -115,13 +160,7 @@ export function serializeToKML(
     <Placemark>
       <name>${escapeXml(name)}</name>
       <styleUrl>#routeStyle</styleUrl>
-      <LineString>
-        <tessellate>1</tessellate>
-        <altitudeMode>clampToGround</altitudeMode>
-        <coordinates>
-          ${coordsStr.trim()}
-        </coordinates>
-      </LineString>
+${geometryXml}
     </Placemark>
   </Document>
 </kml>`;

@@ -65,6 +65,8 @@ export interface SerializeActivityOptions extends ParseTrackOptions {
   name?: string;
   creator?: string;
   stripLaps?: boolean;
+  /** Connect disjoint track segments into a single continuous track. Defaults to false. */
+  connectSegments?: boolean;
   /** Explicit FIT activity start for undated routes; missing point times stay missing. */
   startTime?: Date;
 }

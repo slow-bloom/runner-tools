@@ -142,8 +142,10 @@ export function mergeActivities(
   // Keep source-local increments attached to points when the merged chronology interleaves sources.
   const combinedPoints: (Trackpoint & { distanceIncrement: number | null })[] = [];
   let hasDistances = false;
+  let segmentOffset = 0;
   for (const act of sortedActivities) {
     let previousDistance = 0;
+    let maxLocalSeg = 0;
     for (const point of normalizeTrackDistances(act.points)) {
       let distanceIncrement: number | null = null;
       if (point.distance !== null && Number.isFinite(point.distance)) {
@@ -151,7 +153,16 @@ export function mergeActivities(
         previousDistance = point.distance;
         hasDistances = true;
       }
-      combinedPoints.push({ ...point, distanceIncrement });
+      const localSeg = point.segmentIndex ?? 0;
+      if (localSeg > maxLocalSeg) maxLocalSeg = localSeg;
+      combinedPoints.push({
+        ...point,
+        distanceIncrement,
+        segmentIndex: localSeg + segmentOffset,
+      });
+    }
+    if (act.points.length > 0) {
+      segmentOffset += maxLocalSeg + 1;
     }
   }
 

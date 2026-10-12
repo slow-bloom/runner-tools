@@ -185,4 +185,21 @@ describe('TCX Parser & Serializer', () => {
     // Point cadences 180 and 200 must yield 190 (mean), NOT 180 (from first trackpoint)
     expect(act.summary.avgCadence).toBe(190);
   });
+
+  it('serializes multi-segment points into separate <Track> elements by default, and single <Track> when connectSegments is true', () => {
+    const points = [
+      { lat: 10, lon: 10, ele: 0, time: new Date('2026-03-01T08:00:00Z'), hr: null, cad: null, distance: 0, segmentIndex: 0 },
+      { lat: 10.1, lon: 10.1, ele: 0, time: new Date('2026-03-01T08:01:00Z'), hr: null, cad: null, distance: 100, segmentIndex: 0 },
+      { lat: 20, lon: 20, ele: 0, time: new Date('2026-03-01T08:10:00Z'), hr: null, cad: null, distance: 100, segmentIndex: 1 },
+      { lat: 20.1, lon: 20.1, ele: 0, time: new Date('2026-03-01T08:11:00Z'), hr: null, cad: null, distance: 200, segmentIndex: 1 },
+    ];
+
+    const xmlDisjoint = serializeToTCX(points);
+    const trackMatches = xmlDisjoint.match(/<Track>/g);
+    expect(trackMatches).toHaveLength(2);
+
+    const xmlConnected = serializeToTCX(points, { connectSegments: true });
+    const connectedMatches = xmlConnected.match(/<Track>/g);
+    expect(connectedMatches).toHaveLength(1);
+  });
 });

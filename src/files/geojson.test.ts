@@ -44,4 +44,21 @@ describe('GeoJSON Serializer', () => {
     const parsed = JSON.parse(str);
     expect(parsed.type).toBe('FeatureCollection');
   });
+
+  it('outputs MultiLineString for multi-segment tracks by default and LineString when connectSegments is true', () => {
+    const multiSegPoints: Trackpoint[] = [
+      { lat: 40.71, lon: -74.00, ele: 10, time: null, hr: null, cad: null, distance: 0, segmentIndex: 0 },
+      { lat: 40.72, lon: -74.01, ele: 10, time: null, hr: null, cad: null, distance: 100, segmentIndex: 0 },
+      { lat: 40.80, lon: -74.10, ele: 20, time: null, hr: null, cad: null, distance: 100, segmentIndex: 1 },
+      { lat: 40.81, lon: -74.11, ele: 20, time: null, hr: null, cad: null, distance: 200, segmentIndex: 1 },
+    ];
+
+    const disjoint = toGeoJSON(multiSegPoints);
+    expect(disjoint.features[0].geometry.type).toBe('MultiLineString');
+    expect(disjoint.features[0].geometry.coordinates).toHaveLength(2);
+
+    const connected = toGeoJSON(multiSegPoints, { connectSegments: true });
+    expect(connected.features[0].geometry.type).toBe('LineString');
+    expect(connected.features[0].geometry.coordinates).toHaveLength(4);
+  });
 });
