@@ -18,13 +18,64 @@ const workout: StrengthWorkout = {
 describe('strength workout validation and serialization', () => {
   it.each(['en', 'zh'] as const)('includes both clamshell sides in the %s catalog and glute preset', locale => {
     const catalog = getStrengthExerciseCatalog(locale);
-    expect(catalog.clamshell_left).toMatchObject({ work: 35, rest: 15 });
-    expect(catalog.clamshell_right).toMatchObject({ work: 35, rest: 15 });
+    expect(catalog.clamshell_left).toMatchObject({ mode: 'reps', sets: 1, reps: 15, rest: 15 });
+    expect(catalog.clamshell_right).toMatchObject({ mode: 'reps', sets: 1, reps: 15, rest: 15 });
     expect(catalog.clamshell_left.name).not.toBe(catalog.clamshell_right.name);
     const exercises = getStrengthWorkoutPresets(locale).glute_legs.exercises;
     expect(exercises.slice(-2).map(exercise => exercise.name)).toEqual([
       catalog.clamshell_left.name, catalog.clamshell_right.name,
     ]);
+  });
+
+  it.each(['en', 'zh'] as const)('uses explicit rep targets for controlled strength movements in the %s catalog', locale => {
+    const catalog = getStrengthExerciseCatalog(locale);
+    const targets = {
+      dead_bug: 12, bird_dog: 12, russian_twist: 20,
+      split_left: 10, split_right: 10, bridge_left: 12, bridge_right: 12, lunges: 16,
+      clamshell: 15, clamshell_left: 15, clamshell_right: 15,
+      calf_raise: 12, calf_left: 10, calf_right: 10,
+    } as const;
+    for (const [key, reps] of Object.entries(targets)) {
+      const exercise = catalog[key as keyof typeof targets];
+      expect(exercise).toMatchObject({ mode: 'reps', sets: 1, reps, rest: 15 });
+      expect(exercise).not.toHaveProperty('work');
+    }
+    expect(catalog.plank).toMatchObject({ work: 45 });
+    expect(catalog.side_left).toMatchObject({ work: 30 });
+    expect(catalog.side_right).toMatchObject({ work: 30 });
+    expect(catalog.soleus).toMatchObject({ work: 45 });
+    expect(catalog.balance).toMatchObject({ work: 35 });
+    expect(catalog.hops).toMatchObject({ work: 30 });
+  });
+
+  it.each(['en', 'zh'] as const)('keeps two-round circuits without multiplying rep sets in %s presets', locale => {
+    const presets = getStrengthWorkoutPresets(locale);
+    for (const [key, manualSets] of [['core', 6], ['glute_legs', 14], ['ankle_foot', 6]] as const) {
+      const preset = presets[key];
+      expect(preset.rounds).toBe(2);
+      expect(preset.name).not.toMatch(/minute|分钟/);
+      const selfPaced = preset.exercises.filter(exercise => exercise.mode === 'reps');
+      expect(selfPaced.every(exercise => exercise.sets === 1)).toBe(true);
+      expect(getStrengthWorkoutStats(preset).selfPacedSets).toBe(manualSets);
+      expect(JSON.parse(stringifyStrengthWorkout(preset, {
+        source: 'Test', exportTime: '2026-10-15T00:00:00Z',
+      })).version).toBe('1.1');
+    }
+    for (const key of ['tabata', 'stretch'] as const) {
+      expect(presets[key].exercises.every(exercise => exercise.mode !== 'reps')).toBe(true);
+      expect(getStrengthWorkoutStats(presets[key]).selfPacedSets).toBe(0);
+    }
+    expect(presets.tabata.exercises.map(exercise => exercise.mode === 'reps' ? null : exercise.work)).toEqual([20, 20, 20, 20]);
+    expect(presets.stretch.exercises.map(exercise => exercise.mode === 'reps' ? null : exercise.work)).toEqual(Array(8).fill(45));
+  });
+
+  it('keeps saved timed strength exercises unchanged when preset defaults switch to reps', () => {
+    const saved = { ...workout, exercises: [{ id: 'calf_raise', name: 'Calf raise', work: 40, rest: 15, tip: '' }] };
+    expect(parseStrengthWorkout(JSON.stringify(saved))).toEqual(saved);
+    const catalog = getStrengthExerciseCatalog();
+    expect(catalog.calf_raise).toMatchObject({ mode: 'reps', sets: 1, reps: 12 });
+    if (catalog.calf_raise.mode === 'reps') catalog.calf_raise.reps = 99;
+    expect(getStrengthExerciseCatalog().calf_raise).toMatchObject({ reps: 12 });
   });
 
   it.each(['en', 'zh'] as const)('defaults the last exercise rest to zero in every %s preset', locale => {
@@ -125,7 +176,7 @@ describe('strength workout timeline', () => {
     const stats = getStrengthWorkoutStats(workout);
     expect(stats).toEqual({
       totalSeconds: 32, preparationSeconds: 3, workSeconds: 22,
-      restSeconds: 4, roundRestSeconds: 3, exerciseCount: 2, rounds: 2, workIntervals: 4,
+      restSeconds: 4, roundRestSeconds: 3, exerciseCount: 2, rounds: 2, workIntervals: 4, selfPacedSets: 0,
     });
   });
 
@@ -222,6 +273,120 @@ describe('elapsed-time strength state machine', () => {
     timer.dispatch('start', 100);
     expect(() => timer.dispatch('tick', 99)).toThrow(expect.objectContaining({ code: 'invalidClock' }));
     expect(() => timer.dispatch('unknown' as never, 101)).toThrow(expect.objectContaining({ code: 'invalidAction' }));
+  });
+});
+
+const mixedWorkout: StrengthWorkout = {
+  name: 'Mixed workout', description: '', rounds: 1, roundRest: 0, prepTime: 3,
+  exercises: [
+    { id: 'calf', name: 'Calf raises', mode: 'reps', sets: 2, reps: 15, rest: 2, tip: 'Lower with control.' },
+    { id: 'plank', name: 'Plank', work: 5, rest: 0, tip: '' },
+  ],
+};
+
+describe('self-paced sets and mixed workouts', () => {
+  it('round-trips reps in version 1.1 while retaining version 1.0 for timed-only exports', () => {
+    const json = stringifyStrengthWorkout(mixedWorkout, { source: 'Test', exportTime: '2026-10-15T00:00:00Z' });
+    expect(JSON.parse(json)).toMatchObject({
+      version: '1.1', exercises: [{ mode: 'reps', sets: 2, reps: 15, rest: 2 }, { work: 5 }],
+    });
+    expect(parseStrengthWorkout(json).exercises[0]).toMatchObject({ mode: 'reps', sets: 2, reps: 15 });
+    expect(validateStrengthWorkout(mixedWorkout)).toEqual(mixedWorkout);
+    expect(JSON.parse(stringifyStrengthWorkout(workout, { source: 'Test', exportTime: '2026-10-15T00:00:00Z' })).version).toBe('1.0');
+  });
+
+  it.each([
+    { sets: 0 }, { sets: 11 }, { sets: 1.5 }, { sets: '2' }, { sets: undefined },
+    { reps: 0 }, { reps: 201 }, { reps: 1.5 }, { reps: '15' }, { reps: undefined },
+  ])('rejects malformed counts without coercion: %j', patch => {
+    expect(() => validateStrengthWorkout({
+      ...mixedWorkout, exercises: [{ ...mixedWorkout.exercises[0], ...patch }],
+    })).toThrow(expect.objectContaining({ code: 'invalidReps' }));
+  });
+
+  it('accepts count boundaries and rejects unknown exercise modes', () => {
+    for (const [sets, reps] of [[1, 1], [10, 200]]) {
+      expect(validateStrengthWorkout({
+        ...mixedWorkout, exercises: [{ ...mixedWorkout.exercises[0], sets, reps }],
+      }).exercises[0]).toMatchObject({ sets, reps });
+    }
+    expect(() => validateStrengthWorkout({
+      ...mixedWorkout, exercises: [{ ...mixedWorkout.exercises[0], mode: 'automatic' }],
+    })).toThrow(expect.objectContaining({ code: 'invalidExercise' }));
+  });
+
+  it('expands consecutive sets and final recovery within every circuit round', () => {
+    const timeline = buildStrengthTimeline({ ...mixedWorkout, rounds: 2, roundRest: 3 });
+    expect(timeline.map(stage => stage.type)).toEqual([
+      'prep', 'work', 'rest', 'work', 'rest', 'work', 'round_rest',
+      'work', 'rest', 'work', 'rest', 'work', 'done',
+    ]);
+    expect(timeline[1]).toMatchObject({ reps: 15, set: 1, totalSets: 2, duration: 0, startSeconds: 3, endSeconds: 3 });
+    expect(timeline[3]).toMatchObject({ reps: 15, set: 2, totalSets: 2 });
+    expect(timeline[0]).toMatchObject({ upNextReps: 15, upNextDuration: 0 });
+    expect(timeline[2].tip).toContain('Calf raises');
+    expect(getStrengthWorkoutStats({ ...mixedWorkout, rounds: 2, roundRest: 3 })).toMatchObject({
+      totalSeconds: 24, workSeconds: 10, restSeconds: 8, selfPacedSets: 4, workIntervals: 6,
+    });
+  });
+
+  it('waits indefinitely for one confirmation per set, then automatically times rest', () => {
+    const timer = createStrengthTimer(mixedWorkout);
+    timer.dispatch('start', 0);
+    const delayed = timer.dispatch('tick', 100000);
+    expect(delayed.snapshot).toMatchObject({
+      status: 'running', stageIndex: 1, elapsedSeconds: 100, stageElapsedSeconds: 97,
+      positionSeconds: 3, stageRemainingSeconds: null, remainingSeconds: 9, remainingSelfPacedSets: 2,
+    });
+    expect(timer.dispatch('tick', 101000).cues).toEqual([]);
+    const finished = timer.dispatch('finishSet', 102000);
+    expect(finished).toMatchObject({
+      snapshot: { stageIndex: 2, stageRemainingSeconds: 2, elapsedSeconds: 102, remainingSelfPacedSets: 1 },
+      cues: [{ type: 'stage', stage: { type: 'rest' } }],
+    });
+    expect(timer.dispatch('tick', 110000).snapshot).toMatchObject({
+      stageIndex: 3, stage: { set: 2 }, stageElapsedSeconds: 6, elapsedSeconds: 110,
+    });
+    timer.dispatch('finishSet', 111000);
+    expect(timer.dispatch('tick', 118000)).toMatchObject({
+      snapshot: { status: 'completed', elapsedSeconds: 118, remainingSeconds: 0, remainingSelfPacedSets: 0 },
+      cues: [{ type: 'complete' }],
+    });
+  });
+
+  it('excludes pauses during rep work and only allows finishing a running self-paced set', () => {
+    const timer = createStrengthTimer(mixedWorkout);
+    expect(() => timer.dispatch('finishSet', 0)).toThrow(expect.objectContaining({ code: 'invalidAction' }));
+    timer.dispatch('start', 0);
+    expect(() => timer.dispatch('finishSet', 1000)).toThrow(expect.objectContaining({ code: 'invalidAction' }));
+    timer.dispatch('pause', 10000);
+    expect(() => timer.dispatch('finishSet', 11000)).toThrow(expect.objectContaining({ code: 'invalidAction' }));
+    timer.dispatch('resume', 20000);
+    expect(timer.dispatch('tick', 22000).snapshot).toMatchObject({
+      elapsedSeconds: 12, stageElapsedSeconds: 9, stageRemainingSeconds: null,
+    });
+    timer.dispatch('finishSet', 23000);
+    expect(() => timer.dispatch('finishSet', 23000)).toThrow(expect.objectContaining({ code: 'invalidAction' }));
+  });
+
+  it('supports zero-rest consecutive sets, manual final completion, navigation and reset', () => {
+    const timer = createStrengthTimer({
+      ...mixedWorkout, exercises: [{ ...mixedWorkout.exercises[0], rest: 0 }],
+    });
+    timer.dispatch('start', 0);
+    timer.dispatch('tick', 3000);
+    expect(timer.dispatch('finishSet', 4000).snapshot).toMatchObject({
+      stageIndex: 2, stage: { set: 2 }, status: 'running', remainingSeconds: 0, remainingSelfPacedSets: 1,
+    });
+    expect(timer.dispatch('back', 5000).snapshot).toMatchObject({ stageIndex: 1, elapsedSeconds: 5, remainingSelfPacedSets: 2 });
+    timer.dispatch('skip', 6000);
+    expect(timer.dispatch('finishSet', 7000)).toMatchObject({
+      snapshot: { status: 'completed', elapsedSeconds: 7, remainingSeconds: 0 },
+      cues: [{ type: 'complete' }],
+    });
+    expect(timer.dispatch('reset', 8000).snapshot).toMatchObject({
+      status: 'idle', stageIndex: 0, stageElapsedSeconds: 0, elapsedSeconds: 0, remainingSelfPacedSets: 2,
+    });
   });
 });
 

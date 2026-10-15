@@ -27,7 +27,7 @@ requestAnimationFrame(frame);
 
 ## Workout format and validation
 
-`StrengthWorkout` preserves the existing fields:
+`StrengthWorkout` preserves the existing timed exercise fields:
 
 ```ts
 {
@@ -36,9 +36,17 @@ requestAnimationFrame(frame);
 }
 ```
 
+An exercise may instead use `{ id, name, mode: 'reps', sets, reps, rest, tip }`.
+Sets must be integers from 1–10 and reps from 1–200. Timed exercises can omit
+`mode` or use `'timed'`. Each rep exercise completes its sets consecutively,
+with `rest` seconds after every set, including the last; zero rest moves directly
+on. Workout rounds repeat the entire exercise list, including every set.
+
 `validateStrengthWorkout` returns an independent sanitized copy and never
 coerces malformed input. `parseStrengthWorkout` accepts old saved workouts
-without a version and version `1.0` exports. Unknown fields are discarded.
+without a version and version `1.0` or `1.1` exports. Timed-only workouts still
+export as `1.0`; mixed/rep workouts export as `1.1` so older readers reject them
+rather than silently treating reps as timed work. Unknown fields are discarded.
 Imports are limited to 1 MiB and 100 exercises; names, tips, rounds and integer
 durations use the documented `strengthWorkoutLimits`.
 
@@ -55,11 +63,28 @@ into round recovery or completion. Explicit rest values in custom and imported
 workouts are preserved, including a nonzero final rest. `getStrengthWorkoutStats`
 derives every displayed total from the same timeline.
 
+Self-paced work stages have `duration: 0`, a positive `reps` target, and `set` /
+`totalSets` progress. They are manual barriers, not instant timed stages.
+Statistics expose `selfPacedSets`; all duration totals are **timed subtotals**,
+not predictions of how long rep-based training takes.
+
 Localized preset functions return editable copies; modifying one result never
 changes later presets. The glute routine includes separate left- and right-side
 clamshells, with cues identifying the working leg. The original `clamshell`
 catalog key remains available for existing callers. Presets are templates, not
 personalized medical advice.
+
+Core, glute/leg and ankle presets remain two-round circuits: each rep-based
+movement uses **one set per round**, not multiple consecutive sets multiplied
+by two rounds. Dead bugs and bird dogs default to 12 total reps, twists to 20
+total, split squats to 10 per leg, bridges to 12 per leg, walking lunges to 16
+total, clamshells to 15 per side, double-leg calf raises to 12, and single-leg
+calf raises to 10 per leg. Alternating movements count each side as one rep
+toward the total. Holds, balance, hops, Tabata and stretches remain timed.
+The catalog supplies the same prescriptions for website quick-add controls.
+Mixed routine names use round counts rather than a fixed-minute promise.
+Saved/imported workouts are never migrated automatically; selecting or resetting
+a preset picks up the new defaults.
 
 ## Timer state
 
@@ -68,7 +93,13 @@ personalized medical advice.
 advances by real active elapsed time and can cross multiple stages without
 drift. Paused time is excluded.
 
-Actions are `start`, `tick`, `pause`, `resume`, `skip`, `back`, and `reset`.
+Actions are `start`, `tick`, `pause`, `resume`, `skip`, `back`, `reset`, and
+`finishSet`. The latter only accepts running self-paced work and transitions to
+the next stage, beginning rest automatically. A delayed tick never skips an
+unconfirmed set. Self-paced stages accumulate actual elapsed time but do not
+advance planned timed position; their `stageRemainingSeconds` is `null`.
+`remainingSelfPacedSets` counts manual stages still ahead, including the current
+one. Pausing excludes elapsed time in either mode.
 Navigation changes planned position but does not fabricate elapsed training
 time. Snapshots distinguish active elapsed time, planned position, stage
 elapsed/remaining, workout remaining, and total duration. Countdown and

@@ -8,11 +8,13 @@ export const strengthWorkoutLimits = Object.freeze({
   minPrepSeconds: 3, maxPrepSeconds: 30,
   minWorkSeconds: 5, maxWorkSeconds: 600,
   maxRestSeconds: 300,
+  maxSets: 10,
+  maxReps: 200,
 });
 
 export type StrengthTimerErrorCode =
   | 'invalidJson' | 'invalidWorkout' | 'invalidExercise' | 'invalidDuration'
-  | 'invalidRounds' | 'unsupportedVersion' | 'tooLarge' | 'invalidMetadata'
+  | 'invalidRounds' | 'invalidReps' | 'unsupportedVersion' | 'tooLarge' | 'invalidMetadata'
   | 'invalidClock' | 'invalidAction' | 'audioUnavailable' | 'audioResumeFailed' | 'cueFailed';
 
 export class StrengthTimerError extends Error {
@@ -22,15 +24,19 @@ export class StrengthTimerError extends Error {
   }
 }
 
-export interface StrengthExercise {
+interface StrengthExerciseBase {
   id: string;
   name: string;
-  work: number;
   rest: number;
   tip: string;
 }
 
-/** The existing Apex Run local-storage and version 1.0 export fields. */
+export type StrengthExercise = StrengthExerciseBase & (
+  | { mode?: 'timed'; work: number }
+  | { mode: 'reps'; sets: number; reps: number }
+);
+
+/** Legacy timed workouts and mixed timed/self-paced workouts. */
 export interface StrengthWorkout {
   name: string;
   description: string;
@@ -61,10 +67,17 @@ function duration(value: unknown, min: number, max: number, path: string): numbe
   return value;
 }
 
+function count(value: unknown, max: number, path: string): number {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > max) {
+    throw new StrengthTimerError('invalidReps', path);
+  }
+  return value;
+}
+
 /** Validates without coercion, drops unrecognized fields, and returns an independent editable copy. */
 export function validateStrengthWorkout(value: unknown): StrengthWorkout {
   const data = object(value, 'workout');
-  if (data.version !== undefined && data.version !== '1.0') throw new StrengthTimerError('unsupportedVersion', 'version');
+  if (data.version !== undefined && data.version !== '1.0' && data.version !== '1.1') throw new StrengthTimerError('unsupportedVersion', 'version');
   if (!Array.isArray(data.exercises) || data.exercises.length === 0) throw new StrengthTimerError('invalidExercise', 'exercises');
   if (data.exercises.length > strengthWorkoutLimits.maxExercises) throw new StrengthTimerError('tooLarge', 'exercises');
   if (typeof data.rounds !== 'number' || !Number.isInteger(data.rounds) || data.rounds < 1 || data.rounds > 10) {
@@ -83,10 +96,23 @@ export function validateStrengthWorkout(value: unknown): StrengthWorkout {
     exercises: data.exercises.map((value, index) => {
       const path = `exercises[${index}]`;
       const exercise = object(value, path);
+      if (exercise.mode !== undefined && exercise.mode !== 'timed' && exercise.mode !== 'reps') {
+        throw new StrengthTimerError('invalidExercise', `${path}.mode`);
+      }
+      let prescription: Pick<Extract<StrengthExercise, { mode: 'reps' }>, 'mode' | 'sets' | 'reps'> | { work: number };
+      if (exercise.mode === 'reps') {
+        prescription = {
+          mode: 'reps',
+          sets: count(exercise.sets, strengthWorkoutLimits.maxSets, `${path}.sets`),
+          reps: count(exercise.reps, strengthWorkoutLimits.maxReps, `${path}.reps`),
+        };
+      } else {
+        prescription = { work: duration(exercise.work, strengthWorkoutLimits.minWorkSeconds, strengthWorkoutLimits.maxWorkSeconds, `${path}.work`) };
+      }
       return {
         id: exercise.id === undefined ? `exercise-${index + 1}` : text(exercise.id, 200, `${path}.id`),
         name: text(exercise.name, strengthWorkoutLimits.maxNameLength, `${path}.name`),
-        work: duration(exercise.work, strengthWorkoutLimits.minWorkSeconds, strengthWorkoutLimits.maxWorkSeconds, `${path}.work`),
+        ...prescription,
         rest: duration(exercise.rest, 0, strengthWorkoutLimits.maxRestSeconds, `${path}.rest`),
         tip: exercise.tip === undefined ? '' : text(exercise.tip, strengthWorkoutLimits.maxTipLength, `${path}.tip`, true),
       };
@@ -118,8 +144,9 @@ export function stringifyStrengthWorkout(workout: unknown, metadata: StrengthExp
     throw new StrengthTimerError('invalidMetadata');
   }
   return JSON.stringify({
-    version: '1.0', source: metadata.source, exportTime: metadata.exportTime,
+    version: valid.exercises.some(exercise => exercise.mode === 'reps') ? '1.1' : '1.0',
+    source: metadata.source, exportTime: metadata.exportTime,
     ...valid,
-    exercises: valid.exercises.map(({ name, work, rest, tip }) => ({ name, work, rest, tip })),
+    exercises: valid.exercises.map(({ id: _id, ...exercise }) => exercise),
   }, null, 2);
 }
