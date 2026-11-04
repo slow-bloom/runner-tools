@@ -1,122 +1,112 @@
-# Peter Riegel Race Predictor (`race-predictor`)
+# Race predictor
 
-Predicts race finish times and target paces across arbitrary distances using Peter Riegel's endurance power law formula.
+The generic API retains Riegel predictions. The website explicitly opts into a
+weekly-mileage model for the marathon only. All distances and weekly volume passed
+to the API are in **metres**, times in **seconds**.
 
----
+## Generic API (unchanged)
 
-## Mathematical Foundation
+`predictRaceTime(baseDistanceMeters, baseTimeSeconds, targetDistanceMeters, exponent = 1.06)`
+returns `T1 * (D2 / D1) ** exponent`, or `null` for invalid inputs or an invalid
+output. Distances and time must be finite and positive; the exponent must be finite,
+greater than zero and at most 3. This is a numerical guard, not a physiological
+recommendation or a personal calibration.
 
-In 1977, research engineer and marathoner Peter S. Riegel analyzed world, national, and age-group running records to formulate a mathematical model describing the relationship between distance and athletic performance:
+`calculateRacePredictions(options)` returns formatted times and paces for 5K, 10K,
+half marathon and marathon by default. It accepts custom `targetDistances`,
+`exponent`, display `unit` (`km` or `mi`) and `lang`. Invalid targets are skipped.
+Invalid baselines or no calculable targets return `null`.
 
-$$T_2 = T_1 \times \left(\frac{D_2}{D_1}\right)^b$$
+Without `marathonModel`, the existing calculation and result shape are unchanged,
+including custom exponents and arbitrary target distances. Supplying mileage alone
+does not opt in.
 
-Where:
-- $T_1$: Time recorded for base performance
-- $D_1$: Distance of base performance
-- $D_2$: Distance of target race
-- $T_2$: Predicted time for target race
-- $b$: Fatigue factor exponent
-
-### The Fatigue Factor ($b$)
-
-The exponent $b$ reflects an athlete's aerobic endurance retention as distance increases:
-
-| Exponent $b$ | Runner Profile | Typical Weekly Mileage | Description |
-|:---|:---|:---|:---|
-| **1.06** | Well-Trained / Elite | 70+ km / 45+ mi | Standard Riegel constant; assumes exceptional aerobic base and fuel economy |
-| **1.08** | Recreational / Regular | 35–65 km / 20–40 mi | Realistic fatigue drop-off for consistent amateur distance runners |
-| **1.10** | Novice / Lower Mileage | < 30 km / < 20 mi | Noticeable aerobic decay over longer events (half and full marathon) |
-
----
-
-## API Reference
-
-### `predictRaceTime`
-
-Calculates a pure predicted duration in seconds for a specific target distance.
+## Opt-in marathon model
 
 ```typescript
-function predictRaceTime(
-  baseDistanceMeters: number,
-  baseTimeSeconds: number,
-  targetDistanceMeters: number,
-  exponent?: number // default: 1.06
-): number | null;
-```
+import { calculateRacePredictions, predictMarathonTime } from '@slow-bloom/runner-tools';
 
-- **Returns**: Predicted time in seconds, or `null` if any input is invalid or non-positive.
-
-### `calculateRacePredictions`
-
-Generates predictions across standard race distances (5K, 10K, Half Marathon, Marathon) with pace and split projections.
-
-```typescript
-function calculateRacePredictions(
-  params: RacePredictorParams
-): RacePredictorResult | null;
-```
-
-#### `RacePredictorParams`
-
-```typescript
-interface RacePredictorParams {
-  baseDistanceMeters: number;
-  baseTimeSeconds: number;
-  exponent?: number;  // 1.00 to 1.30 (default: 1.06)
-  unit?: 'km' | 'mi'; // default: 'km'
-  lang?: string;      // default: 'en'
-}
-```
-
-#### `RacePredictorResult`
-
-```typescript
-interface RacePredictorResult {
-  baseDistanceMeters: number;
-  baseTimeSeconds: number;
-  exponent: number;
-  predictions: RacePredictionItem[];
-}
-```
-
----
-
-## Assumptions & Limitations
-
-1. **Specific Preparation Assumption**: Riegel's formula presumes the runner has completed distance-appropriate training for the target event. A 20:00 5K runner who runs only 15 km/week cannot achieve a 3:10 marathon simply because the formula computes it.
-2. **Fuel and Heat Limitations**: In events longer than 25 km, carbohydrate depletion and thermoregulation play a significant role not fully modeled by a single power exponent.
-3. **Valid Exponent Range**: Enforced strictly between `1.00` and `1.30`. Out-of-range values return `null`.
-
----
-
-## Code Example
-
-```typescript
-import { calculateRacePredictions, predictRaceTime } from '@slow-bloom/runner-tools';
-
-// 1. Predict a single distance
-const marathonTimeSecs = predictRaceTime(10000, 2700, 42195, 1.06);
-console.log(`Marathon seconds: ${marathonTimeSecs}`); // ~12421s (3:27:01)
-
-// 2. Multi-distance prediction table
 const result = calculateRacePredictions({
-  baseDistanceMeters: 10000,
-  baseTimeSeconds: 2700, // 45:00 10K
-  exponent: 1.08,        // Recreational runner profile
+  baseDistanceMeters: 21097.5,
+  baseTimeSeconds: 6000, // Full elapsed time, including pauses.
+  marathonModel: 'weekly-mileage',
+  weeklyDistanceMeters: 50000, // Six-week total / 6, not the most recent week.
   unit: 'km',
   lang: 'en',
 });
 
-if (result) {
-  for (const item of result.predictions) {
-    console.log(`${item.distanceLabel}: ${item.timeFormatted} (${item.paceFormatted} /km)`);
-  }
-}
+// Independently usable, with an explicit status and nullable seconds:
+const marathon = predictMarathonTime(21097.5, 6000, 50000);
+// { status: 'predicted', seconds: approximately 13426.866554621 }
 ```
 
----
+Only targets of **exactly 42195 metres** use the new model; a target's label or
+key does not select it. All other targets retain the caller's Riegel exponent
+(default 1.06). The returned `exponent` still describes those Riegel targets,
+not the marathon model.
 
-## Primary References
+### Source-distance policy
 
-1. **Riegel, P. S.** (1977). "Athletic Records and Human Endurance". *American Scientist*, 65(3), 285–290.
-2. **Riegel, P. S.** (1981). "Athletic Records and Human Endurance". *Runner's World*, May 1981.
+Match a source within 2% of 5000, 8046.72, 10000, 16093.44, 21097.5 or 42195 metres
+to that standard distance. This GPS tolerance is an app policy, not a fitted
+scientific coefficient. Other distances from 5000 to below 42195 metres use the
+actual distance. Distances below the eligibility threshold and unsupported ultras
+cannot supply a marathon prediction.
+
+A marathon-matched source returns its elapsed time directly, without requiring or
+validating mileage. It is an observed result, not a projection.
+
+### Calculation for eligible shorter sources
+
+```text
+projected_seconds = elapsed_seconds * (42195 / source_metres) ** 1.07
+projected_speed   = 42195 / projected_seconds
+weekly_miles      = weekly_metres / 1609.344
+marathon_speed    = 0.16018617
+                 + 0.83076202 * projected_speed
+                 + 0.06423826 * (weekly_miles / 10)
+marathon_seconds  = 42195 / marathon_speed
+```
+
+Inputs, intermediates and output must be finite and valid. In particular, an
+overflowing `projected_seconds` is rejected before taking its reciprocal.
+Mileage must be nonnegative; an omitted or `null` value is **missing**, not zero.
+An explicitly supplied numeric zero is accepted.
+
+`predictMarathonTime` returns `{ status, seconds }`. Successful statuses are
+`predicted` and `direct`; failure statuses are `invalid-input`,
+`unsupported-distance`, `missing-mileage` and `invalid-mileage`, with `seconds: null`.
+The opted-in table result includes `marathonStatus` and omits an unavailable
+marathon row while retaining other calculable predictions. If no target is
+calculable it still returns `null`; callers needing a marathon-only reason can use
+`predictMarathonTime`.
+
+### Reference vectors
+
+| Source | Elapsed seconds | Weekly metres | Marathon seconds |
+|---|---:|---:|---:|
+| Half marathon | 6000 | 35000 | 13687.649202307 |
+| Half marathon | 6000 | 50000 | 13426.866554621 |
+| Half marathon | 6000 | 65000 | 13175.835195118 |
+| 22000 metres | 7200 | 50000 | 15150.372161576 |
+
+## Interpretation and website/app boundary
+
+Vickers & Vertosick studied **race results** from recreational runners. Accepting
+ordinary training runs is our adaptation, not independently validated accuracy.
+An easy run need not represent race capacity; weather, hills, fuelling and
+distance-specific preparation remain outside this calculation.
+
+The website receives one manually entered performance and a runner-provided
+six-week weekly average. It neither scans history nor filters recovery runs,
+intervals or outliers, and does not fit an exact personal fatigue exponent.
+The app's automatic source selection and 42-day mileage aggregation are separate
+from this library. A one-performance calculator has no history-based evidence dots.
+
+## References
+
+- Riegel, P. S. (1981). Athletic Records and Human Endurance. *American Scientist*,
+  69(3), 285–290.
+- Vickers & Vertosick (2016). [An empirical study of race times in recreational
+  endurance runners](https://pmc.ncbi.nlm.nih.gov/articles/PMC5000509/).
+  DOI: 10.1186/s13102-016-0052-y.

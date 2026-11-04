@@ -40,6 +40,71 @@ export interface RacePredictionsResult {
   basePaceFormatted: string;
   exponent: number;
   predictions: PredictedPerformance[];
+  /** Present only when the weekly-mileage marathon model is selected. */
+  marathonStatus?: MarathonPrediction['status'];
+}
+
+export type MarathonPrediction =
+  | { status: 'predicted' | 'direct'; seconds: number }
+  | {
+      status: 'invalid-input' | 'unsupported-distance' | 'missing-mileage' | 'invalid-mileage';
+      seconds: null;
+    };
+
+const MARATHON_METERS = 42195;
+const MARATHON_SOURCE_DISTANCES = [5000, 8046.72, 10000, 16093.44, 21097.5, MARATHON_METERS];
+
+/**
+ * Vickers & Vertosick (2016) single-performance + weekly-mileage marathon model.
+ * Training-run inputs and 2% GPS distance matching are app adaptations, not
+ * independently validated extensions of the race-results study.
+ */
+export function predictMarathonTime(
+  baseDistanceMeters: number,
+  elapsedSeconds: number,
+  weeklyDistanceMeters?: number | null,
+): MarathonPrediction {
+  if (
+    !Number.isFinite(baseDistanceMeters) || baseDistanceMeters <= 0 ||
+    !Number.isFinite(elapsedSeconds) || elapsedSeconds <= 0
+  ) {
+    return { status: 'invalid-input', seconds: null };
+  }
+
+  const standardDistance = MARATHON_SOURCE_DISTANCES.find(
+    (distance) => baseDistanceMeters >= distance * 0.98 && baseDistanceMeters <= distance * 1.02,
+  );
+  const sourceDistance = standardDistance ?? baseDistanceMeters;
+  if (sourceDistance === MARATHON_METERS) {
+    return { status: 'direct', seconds: elapsedSeconds };
+  }
+  if (sourceDistance < 5000 || sourceDistance >= MARATHON_METERS) {
+    return { status: 'unsupported-distance', seconds: null };
+  }
+  if (weeklyDistanceMeters == null) {
+    return { status: 'missing-mileage', seconds: null };
+  }
+  if (!Number.isFinite(weeklyDistanceMeters) || weeklyDistanceMeters < 0) {
+    return { status: 'invalid-mileage', seconds: null };
+  }
+
+  const projectedSeconds = predictRaceTime(sourceDistance, elapsedSeconds, MARATHON_METERS, 1.07);
+  // Reject overflow before taking the reciprocal: an infinite projection would
+  // otherwise produce an apparently valid intercept-only estimate.
+  if (projectedSeconds === null) return { status: 'invalid-input', seconds: null };
+  const projectedSpeed = MARATHON_METERS / projectedSeconds;
+  const weeklyMiles = weeklyDistanceMeters / 1609.344;
+  const marathonSpeed = 0.16018617 + 0.83076202 * projectedSpeed + 0.06423826 * (weeklyMiles / 10);
+  const seconds = MARATHON_METERS / marathonSpeed;
+  if (
+    !Number.isFinite(projectedSpeed) || projectedSpeed <= 0 ||
+    !Number.isFinite(weeklyMiles) ||
+    !Number.isFinite(marathonSpeed) || marathonSpeed <= 0 ||
+    !Number.isFinite(seconds) || seconds <= 0
+  ) {
+    return { status: 'invalid-input', seconds: null };
+  }
+  return { status: 'predicted', seconds };
 }
 
 /**
@@ -81,6 +146,10 @@ export interface CalculateRacePredictionsOptions {
   targetDistances?: readonly RacePredictionTarget[];
   unit?: PaceUnit;
   lang?: LocaleInput;
+  /** Opt-in: affects only targets of exactly 42195 metres. Default remains Riegel. */
+  marathonModel?: 'weekly-mileage';
+  /** Average weekly distance over six weeks, in metres; omitted is not zero. */
+  weeklyDistanceMeters?: number | null;
 }
 
 /**
@@ -127,9 +196,14 @@ export function calculateRacePredictions(
   const basePaceSecs = baseTimeSeconds / (baseDistanceMeters / unitDistance);
 
   const predictions: PredictedPerformance[] = [];
+  const marathon = options.marathonModel === 'weekly-mileage'
+    ? predictMarathonTime(baseDistanceMeters, baseTimeSeconds, options.weeklyDistanceMeters)
+    : undefined;
 
   for (const target of validTargets) {
-    const predictedSeconds = predictRaceTime(baseDistanceMeters, baseTimeSeconds, target.meters, exponent);
+    const predictedSeconds = marathon && target.meters === MARATHON_METERS
+      ? marathon.seconds
+      : predictRaceTime(baseDistanceMeters, baseTimeSeconds, target.meters, exponent);
     if (predictedSeconds === null) continue;
 
     const targetPaceSecs = predictedSeconds / (target.meters / unitDistance);
@@ -177,5 +251,6 @@ export function calculateRacePredictions(
     basePaceFormatted: formatPace(basePaceSecs),
     exponent,
     predictions,
+    ...(marathon ? { marathonStatus: marathon.status } : {}),
   };
 }
